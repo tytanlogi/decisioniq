@@ -1,0 +1,58 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.5.14'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.app'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	/*
+	 * LangGraph4j is used as the assistant workflow orchestrator.
+	 */
+	implementation platform("org.bsc.langgraph4j:langgraph4j-bom:1.8.17")
+
+	// Core graph runtime: StateGraph, nodes, edges, compiled graph, routing, and graph execution.
+	implementation "org.bsc.langgraph4j:langgraph4j-core"
+
+	// Integration helpers for using LangChain4j models/tools inside LangGraph4j graph nodes.
+	implementation "org.bsc.langgraph4j:langgraph4j-langchain4j"
+
+	// Optional graph checkpoint persistence for resumable/debuggable workflows backed by Postgres.
+	implementation "org.bsc.langgraph4j:langgraph4j-postgres-saver"
+
+	// Source: https://mvnrepository.com/artifact/dev.langchain4j/langchain4j
+	implementation("dev.langchain4j:langchain4j:1.15.0")
+	// Source: https://mvnrepository.com/artifact/dev.langchain4j/langchain4j-ollama
+	implementation("dev.langchain4j:langchain4j-ollama:1.15.0")
+
+	// OpenAI model provider for hosted intent parsing and final answer generation.
+	// Keep this pluggable so local Ollama and OpenAI can be switched by configuration later.
+	implementation("dev.langchain4j:langchain4j-open-ai:1.15.0")
+	// Source: https://mvnrepository.com/artifact/org.apache.lucene/lucene-analyzers-common
+	implementation("org.apache.lucene:lucene-analyzers-common:8.11.4")
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testCompileOnly 'org.projectlombok:lombok'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}

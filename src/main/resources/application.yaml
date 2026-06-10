@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: decisioniq
+openai:
+  base-Url: https://api.openai.com
+  api-key: ${OPENAI_API_KEY}
+  model: ${MODEL_NAME}
