@@ -25,6 +25,6 @@ public class DIQ_IntentUnderstandingAgent implements NodeAction<DecisionIQAgent>
     public Map<String, Object> apply(DecisionIQAgent state) {
         String response = decisionIntentService.validateIntentAndAction(state.intent());
         log.info("response received is {}",response);
-        return Map.of(AgentConstants.ANSWER,response);
+        return Map.of(AgentConstants.QUERY,response);
     }
 }

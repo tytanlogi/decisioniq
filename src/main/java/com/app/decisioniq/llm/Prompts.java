@@ -40,14 +40,9 @@ public final class Prompts {
 
             Required JSON shape:
             {
-              "status": "VALID | CLARIFICATION_REQUIRED | UNKNOWN",
               "transactionId": "string or null",
-              "asks": [
-                {
-                  "intent": "one allowed intent name",
-                  "transactionId": "string or null"
-                }
-              ],
+              "intent": "one allowed intent name with comma separator",
+              "transactionId": "string or null",
               "decisionAssumption": "APPROVED | DECLINED | REVIEW | null",
               "clarificationRequired": true or false,
               "clarificationQuestion": "string or null"

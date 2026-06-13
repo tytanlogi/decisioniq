@@ -17,8 +17,8 @@ public class DecisionAssistantOrchestrator {
         this.decisionIQAgentCompiledGraph = decisionIQAgentCompiledGraph;
     }
 
-    public void initiateAgentOrchestration(String question) {
+    public String initiateAgentOrchestration(String question) {
         DecisionIQAgent decisionIQAgent = decisionIQAgentCompiledGraph.invoke(Map.of(DecisionIQAgent.INTENT, question)).orElseThrow(() -> new IllegalStateException("Graph didn't return state"));
-        System.out.println(decisionIQAgent.answer());
+        return decisionIQAgent.answer();
     }
 }

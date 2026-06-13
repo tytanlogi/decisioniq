@@ -5,12 +5,14 @@ import org.bsc.langgraph4j.state.AgentState;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+
 //It is a LangGraph4j state model
 @Component
 public class DecisionIQAgent extends AgentState {
 
-    public static String INTENT="intent";
-    public static String ANSWER="answer";
+    public static String INTENT = "intent";
+    public static String QUERY = "query";
+    public static String ANSWER = "answer";
 
     /**
      * Constructs an AgentState with the given initial data.
@@ -21,11 +23,15 @@ public class DecisionIQAgent extends AgentState {
         super(initData);
     }
 
-    public String intent(){
+    public String intent() {
         return this.<String>value(AgentConstants.INTENT).orElse(" ");
     }
 
-    public String answer(){
+    public String query(){
+        return this.<String>value(AgentConstants.QUERY).orElse(" ");
+    }
+
+    public String answer() {
         return this.<String>value(AgentConstants.ANSWER).orElse(" ");
     }
 }

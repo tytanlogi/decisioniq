@@ -19,7 +19,7 @@ public class AgentApi {
     }
 
     @PostMapping("/ask")
-    public void askAgent(@RequestBody  String question){
-        decisionAssistantOrchestrator.initiateAgentOrchestration(question);
+    public String askAgent(@RequestBody  String question){
+        return decisionAssistantOrchestrator.initiateAgentOrchestration(question);
     }
 }
