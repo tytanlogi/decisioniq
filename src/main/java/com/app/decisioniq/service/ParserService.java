@@ -1,6 +1,6 @@
 package com.app.decisioniq.service;
 
-import com.app.decisioniq.llm.QuestionIntent;
+import com.app.decisioniq.llm.DecisionIqIntent;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
@@ -45,10 +45,10 @@ public class ParserService {
 
     private List<String> filterIntentBasedOnTokens(Set<String> tokenSet) {
         List<String> intentList = new ArrayList<>();
-        for (QuestionIntent questionIntent : QuestionIntent.values()) {
+        for (DecisionIqIntent decisionIqIntent : DecisionIqIntent.values()) {
             for (String token:tokenSet){
-                if (questionIntent.name().contains(token)){
-                    intentList.add(questionIntent.name());
+                if (decisionIqIntent.name().contains(token)){
+                    intentList.add(decisionIqIntent.name());
                 }
             }
         }

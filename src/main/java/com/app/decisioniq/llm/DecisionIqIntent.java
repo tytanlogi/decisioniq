@@ -1,6 +1,6 @@
 package com.app.decisioniq.llm;
 
-public enum QuestionIntent {
+public enum DecisionIqIntent {
 
     EXPLAIN_TRANSACTION_DECISION,
     EXPLAIN_APPROVAL,
