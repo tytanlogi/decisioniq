@@ -38,14 +38,9 @@ dependencies {
 
 	// Source: https://mvnrepository.com/artifact/dev.langchain4j/langchain4j
 	implementation("dev.langchain4j:langchain4j:1.15.0")
-	// Source: https://mvnrepository.com/artifact/dev.langchain4j/langchain4j-ollama
-	implementation("dev.langchain4j:langchain4j-ollama:1.15.0")
-
 	// OpenAI model provider for hosted intent parsing and final answer generation.
-	// Keep this pluggable so local Ollama and OpenAI can be switched by configuration later.
+	// Keep this provider isolated so other providers can be added without changing assistant logic.
 	implementation("dev.langchain4j:langchain4j-open-ai:1.15.0")
-	// Source: https://mvnrepository.com/artifact/org.apache.lucene/lucene-analyzers-common
-	implementation("org.apache.lucene:lucene-analyzers-common:8.11.4")
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testCompileOnly 'org.projectlombok:lombok'
