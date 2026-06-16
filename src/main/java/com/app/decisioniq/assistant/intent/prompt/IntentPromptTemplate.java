@@ -37,6 +37,8 @@ public final class IntentPromptTemplate {
 
             User: Give me the model score for TXN-006450.
             Output asks: SHOW_MODEL_SCORE
+            
+            IMPORTANT: If the user intent is about write[create/update/delte] operation to database then it needs be flagged and we need to set cud to true since that is invalid request and shouldn't be done and also we have to set clarificationQuestion in appropriate way to let know the customer.Else set it as false.
 
             Required JSON shape:
             {
@@ -50,6 +52,7 @@ public final class IntentPromptTemplate {
               ],
               "decisionAssumption": "APPROVED | DECLINED | REVIEW | null",
               "clarificationRequired": true or false,
+              "cud":true
               "clarificationQuestion": "string or null"
             }
             """;

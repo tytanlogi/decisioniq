@@ -19,7 +19,7 @@ public class QueryPlanningNode implements NodeAction<DecisionIQAgentState> {
 
     @Override
     public Map<String, Object> apply(DecisionIQAgentState state) {
-        String queryResult = queryPlanningService.planQuery(state.parsedQuestionJson());
-        return Map.of(DecisionGraphStateKey.QUERY_RESULT, queryResult);
+        String queryResult = queryPlanningService.planQuery(state.clarifyIntent().get());
+        return Map.of(DecisionGraphStateKey.QUERY_PLANNING_KEY, queryResult);
     }
 }

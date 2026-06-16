@@ -5,8 +5,8 @@ public final class DecisionGraphStateKey {
     private DecisionGraphStateKey() {
     }
 
-    public static final String QUESTION = "question";
-    public static final String PARSED_QUESTION_JSON = "parsedQuestionJson";
-    public static final String QUERY_RESULT = "queryResult";
-    public static final String ANSWER = "answer";
+    public static final String QUESTION_KEY = "question";
+    public static final String INTENT_UNDERSTANDING_KEY = "intentKey";
+    public static final String QUERY_PLANNING_KEY = "queryPlanning";
+    public static final String ANSWER_KEY = "answer";
 }

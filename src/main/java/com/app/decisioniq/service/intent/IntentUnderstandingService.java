@@ -1,7 +1,10 @@
 package com.app.decisioniq.service.intent;
 
-import com.app.decisioniq.assistant.intent.model.DecisionIqIntent;
+import com.app.decisioniq.assistant.intent.model.ParsedQuestion;
 import com.app.decisioniq.assistant.intent.prompt.IntentPromptTemplate;
+import com.app.decisioniq.assistant.intent.type.DecisionIqIntent;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.model.chat.ChatModel;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -14,31 +17,20 @@ import java.util.Arrays;
 public class IntentUnderstandingService {
 
     private final ChatModel chatModel;
+    private final ObjectMapper objectMapper;
 
-    public IntentUnderstandingService(@Qualifier("openAiChatModel") ChatModel chatModel) {
+    public IntentUnderstandingService(@Qualifier("openAiChatModel") ChatModel chatModel, ObjectMapper objectMapper) {
         this.chatModel = chatModel;
+        this.objectMapper = objectMapper;
     }
 
-    public String parseIntent(String question) {
+    public ParsedQuestion parseIntent(String question) throws JsonProcessingException {
+        ParsedQuestion parsedQuestion;
         if (countWords(question) <= 3) {
-            return """
-                    {
-                      "status": "CLARIFICATION_REQUIRED",
-                      "transactionId": null,
-                      "asks": [
-                        {
-                          "intent": "CLARIFICATION_REQUIRED",
-                          "transactionId": null
-                        }
-                      ],
-                      "decisionAssumption": null,
-                      "clarificationRequired": true,
-                      "clarificationQuestion": "Please provide a clearer fraud decision question."
-                    }
-                    """;
+            log.warn("Please provide a clearer fraud decision question.");
         }
-
-        return chatModel.chat(buildPrompt(question));
+        String response = chatModel.chat(buildPrompt(question));
+        return parseAndFlagIntentResponse(response);
     }
 
     private String buildPrompt(String question) {
@@ -47,7 +39,7 @@ public class IntentUnderstandingService {
 
                 User question:
                 %s
-
+ 
                 Allowed intent names:
                 %s
                 """.formatted(
@@ -65,5 +57,21 @@ public class IntentUnderstandingService {
         }
 
         return text.trim().split("\\s+").length;
+    }
+
+    private ParsedQuestion parseAndFlagIntentResponse(String response) throws JsonProcessingException {
+        ParsedQuestion parsedResponse = parseJsonIntentResponse(response);
+        validateIntentResponse(parsedResponse);
+        return parsedResponse;
+    }
+
+    private ParsedQuestion parseJsonIntentResponse(String response) throws JsonProcessingException{
+        return objectMapper.readValue(response, ParsedQuestion.class);
+    }
+
+    private void validateIntentResponse(ParsedQuestion parsedResponse){
+        if (parsedResponse.isCud()){
+            log.warn("Intent is having a CRUD operation");
+        }
     }
 }

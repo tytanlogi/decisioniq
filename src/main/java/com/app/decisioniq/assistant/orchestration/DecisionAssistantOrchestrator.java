@@ -18,7 +18,7 @@ public class DecisionAssistantOrchestrator {
 
     public String answerQuestion(String question) {
         DecisionIQAgentState finalState = decisionAssistantGraph.invoke(Map.of(
-                DecisionGraphStateKey.QUESTION, question
+                DecisionGraphStateKey.QUESTION_KEY, question
         )).orElseThrow(() -> new IllegalStateException("Graph did not return a final state"));
 
         return finalState.answer();
