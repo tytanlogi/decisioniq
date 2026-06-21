@@ -13,7 +13,7 @@ import java.util.Optional;
 public class IntentClarificationNode implements NodeAction<DecisionIQAgentState> {
 
     @Override
-    public Map<String, Object> apply(DecisionIQAgentState state) throws Exception {
+    public Map<String, Object> apply(DecisionIQAgentState state) {
         Optional<ParsedQuestion> intentClarification = state.clarifyIntent();
         return Map.of(DecisionGraphStateKey.ANSWER_KEY,intentClarification.get().getClarificationQuestion());
     }

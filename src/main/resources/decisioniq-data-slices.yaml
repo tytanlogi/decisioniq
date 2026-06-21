@@ -1,0 +1,60 @@
+decisioniq:
+  assistant:
+    data-slices:
+      TRANSACTION_DECISION_SLICE:
+        description: Core transaction and final decision facts.
+        tables:
+          decision_cases:
+            fields:
+              - case_id
+              - correlation_id
+              - customer_ref
+              - account_ref
+              - event_time
+              - decision_name
+              - scenario_type
+          transaction_context:
+            fields:
+              - amount
+              - currency
+              - transaction_type
+              - channel
+              - merchant_name
+              - merchant_category
+              - transaction_country
+              - transaction_city
+          decision_outcomes:
+            fields:
+              - decision_action
+      DECISION_EXPLANATION_SLICE:
+        description: Evidence used to explain why the final decision happened.
+        tables:
+          decision_outcomes:
+            fields:
+              - decision_action
+          model_outputs:
+            fields:
+              - model_id
+              - score_name
+              - score
+              - risk_band
+          rule_evaluations:
+            fields:
+              - rule_name
+              - rule_meaning
+              - status
+              - decision_candidate
+          decision_reason_codes:
+            fields:
+              - reason_order
+              - reason_text
+          risk_signals:
+            fields:
+              - known_device
+              - known_beneficiary
+              - known_merchant
+              - international_transaction
+              - odd_hour
+              - authentication_method
+              - failed_login_count_last_hour
+              - amount_above_balance
