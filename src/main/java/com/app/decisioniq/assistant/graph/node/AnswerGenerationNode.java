@@ -22,7 +22,6 @@ public class AnswerGenerationNode implements NodeAction<DecisionIQAgentState> {
     @Override
     public Map<String, Object> apply(DecisionIQAgentState state) {
         log.info("Generating answer");
-        String answer = answerGenerationService.generateAnswer(state.query());
-        return Map.of(DecisionGraphStateKey.ANSWER_KEY, answer);
+        return Map.of();
     }
 }

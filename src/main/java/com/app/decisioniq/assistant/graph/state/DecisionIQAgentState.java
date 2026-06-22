@@ -2,6 +2,7 @@ package com.app.decisioniq.assistant.graph.state;
 
 import com.app.decisioniq.assistant.graph.constant.DecisionGraphStateKey;
 import com.app.decisioniq.assistant.intent.model.ParsedQuestion;
+import com.app.decisioniq.assistant.planning.model.QueryPlan;
 import org.bsc.langgraph4j.state.AgentState;
 
 import java.util.Map;
@@ -26,8 +27,8 @@ public class DecisionIQAgentState extends AgentState {
         return this.value(DecisionGraphStateKey.INTENT_UNDERSTANDING_KEY);
     }
 
-    public String query() {
-        return this.<String>value(DecisionGraphStateKey.QUERY_PLANNING_KEY).orElse("");
+    public Optional<QueryPlan> getQuery() {
+        return this.<QueryPlan>value(DecisionGraphStateKey.QUERY_PLANNING_KEY);
     }
 
     public String answer() {

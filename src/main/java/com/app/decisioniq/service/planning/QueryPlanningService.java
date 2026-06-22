@@ -6,7 +6,6 @@ import com.app.decisioniq.assistant.dataslice.config.DataSliceProperties;
 import com.app.decisioniq.assistant.dataslice.type.DecisionDataSlice;
 import com.app.decisioniq.assistant.intent.model.ParsedAsk;
 import com.app.decisioniq.assistant.intent.model.ParsedQuestion;
-import com.app.decisioniq.assistant.intent.type.DecisionIqIntent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,7 +16,7 @@ import java.util.List;
 @Slf4j
 public class QueryPlanningService {
 
-    private AssistantDataSliceProperties assistantDataSliceProperties;
+    private final AssistantDataSliceProperties assistantDataSliceProperties;
 
     @Autowired
     public QueryPlanningService(AssistantDataSliceProperties assistantDataSliceProperties) {
@@ -25,7 +24,7 @@ public class QueryPlanningService {
     }
 
     public String planQuery(ParsedQuestion parsedQuestionJson) {
-        log.info("Planning query for parsed question {}", parsedQuestionJson);
+        log.info("Planning getQuery for parsed question {}", parsedQuestionJson);
         getDetails(parsedQuestionJson);
         return "Query planned";
     }

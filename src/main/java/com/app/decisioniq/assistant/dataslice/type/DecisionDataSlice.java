@@ -1,7 +1,7 @@
 package com.app.decisioniq.assistant.dataslice.type;
 
 /**
- * Business-level data slices used by query planning.
+ * Business-level data slices used by getQuery planning.
  */
 public enum DecisionDataSlice {
 

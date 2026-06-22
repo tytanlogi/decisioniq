@@ -17,4 +17,3 @@ public class ParsedQuestion implements Serializable {
     boolean cud;
     String clarificationQuestion;
 }
-
