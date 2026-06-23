@@ -22,8 +22,7 @@ public class QueryPlan implements Serializable {
     private String tenantId;
     private String transactionId;
     private List<DecisionIqIntent> intents;
-    private RagData rag;
+    private String ragCollectionName;
     private Map<String,MultiValueMap<String,List<String >>> sqlTableFieldsMap =new HashMap<>();
     private Map<String,List<String>> ragMap=new HashMap<>();
-    private String ragCollectionName;
 }

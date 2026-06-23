@@ -32,6 +32,12 @@ public class DecisionIQAgentState extends AgentState {
         return this.value(DecisionGraphStateKey.INTENT_UNDERSTANDING_KEY);
     }
 
+    //Need to change the return type
+    public String collectEvidence(){
+        return this.<String>value(DecisionGraphStateKey.EVIDENCE_COLLECTION_KEY)
+                .orElseThrow(() -> new IllegalStateException("Question missing from graph state"));
+    }
+
     public Optional<QueryPlan> getQuery() {
         return this.value(DecisionGraphStateKey.QUERY_PLANNING_KEY);
     }

@@ -1,10 +1,7 @@
 package com.app.decisioniq.assistant.graph.config;
 
 import com.app.decisioniq.assistant.graph.constant.DecisionGraphNode;
-import com.app.decisioniq.assistant.graph.node.AnswerGenerationNode;
-import com.app.decisioniq.assistant.graph.node.IntentClarificationNode;
-import com.app.decisioniq.assistant.graph.node.IntentUnderstandingNode;
-import com.app.decisioniq.assistant.graph.node.QueryPlanningNode;
+import com.app.decisioniq.assistant.graph.node.*;
 import com.app.decisioniq.assistant.graph.state.DecisionIQAgentState;
 import com.app.decisioniq.assistant.intent.model.ParsedQuestion;
 import org.bsc.langgraph4j.CompiledGraph;
@@ -26,6 +23,7 @@ public class DecisionGraphConfiguration {
     public CompiledGraph<DecisionIQAgentState> decisionAssistantGraph(IntentUnderstandingNode intentUnderstandingNode,
             IntentClarificationNode intentClarificationNode,
             QueryPlanningNode queryPlanningNode,
+            EvidenceCollectionNode evidenceCollectionNode,
             AnswerGenerationNode answerGenerationNode
     ) throws GraphStateException {
         StateGraph<DecisionIQAgentState> graph = new StateGraph<>(DecisionIQAgentState::new);
@@ -33,6 +31,7 @@ public class DecisionGraphConfiguration {
         graph.addNode(DecisionGraphNode.INTENT_UNDERSTANDING, AsyncNodeAction.node_async(intentUnderstandingNode));
         graph.addNode(DecisionGraphNode.INTENT_CLARIFICATION, AsyncNodeAction.node_async(intentClarificationNode));
         graph.addNode(DecisionGraphNode.QUERY_PLANNING, AsyncNodeAction.node_async(queryPlanningNode));
+        graph.addNode(DecisionGraphNode.EVIDENCE_COLLECTION,AsyncNodeAction.node_async(evidenceCollectionNode));
         graph.addNode(DecisionGraphNode.ANSWER_GENERATION, AsyncNodeAction.node_async(answerGenerationNode));
 
         graph.addEdge(GraphDefinition.START, DecisionGraphNode.INTENT_UNDERSTANDING);
@@ -45,7 +44,8 @@ public class DecisionGraphConfiguration {
                         .build()
         );
         graph.addEdge(DecisionGraphNode.INTENT_CLARIFICATION, GraphDefinition.END);
-        graph.addEdge(DecisionGraphNode.QUERY_PLANNING, DecisionGraphNode.ANSWER_GENERATION);
+        graph.addEdge(DecisionGraphNode.QUERY_PLANNING, DecisionGraphNode.EVIDENCE_COLLECTION);
+        graph.addEdge(DecisionGraphNode.EVIDENCE_COLLECTION,DecisionGraphNode.ANSWER_GENERATION);
         graph.addEdge(DecisionGraphNode.ANSWER_GENERATION, GraphDefinition.END);
 
         return graph.compile();
