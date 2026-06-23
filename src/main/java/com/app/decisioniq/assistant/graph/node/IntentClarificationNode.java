@@ -14,7 +14,11 @@ public class IntentClarificationNode implements NodeAction<DecisionIQAgentState>
 
     @Override
     public Map<String, Object> apply(DecisionIQAgentState state) {
+        String message="Cannot answer the question, unable to find the intent";
         Optional<ParsedQuestion> intentClarification = state.clarifyIntent();
-        return Map.of(DecisionGraphStateKey.ANSWER_KEY,intentClarification.get().getClarificationQuestion());
+        if (intentClarification.isPresent()){
+            message=intentClarification.get().getClarificationQuestion();
+        }
+        return Map.of(DecisionGraphStateKey.ANSWER_KEY,message);
     }
 }

@@ -7,7 +7,5 @@ package com.app.decisioniq.api.assistant.model;
  */
 public record AssistantAskRequest(
         String tenantId,
-        String userRole,
         String question
-) {
-}
+) { }

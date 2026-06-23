@@ -32,6 +32,11 @@ decisioniq:
           decision_outcomes:
             fields:
               - decision_action
+          decision_cases:
+            fields:
+              - case_id
+              - correlation_id
+              - customer_ref
           model_outputs:
             fields:
               - model_id

@@ -2,6 +2,7 @@ package com.app.decisioniq.api.assistant;
 
 import com.app.decisioniq.api.assistant.model.AssistantAskRequest;
 import com.app.decisioniq.api.assistant.model.AssistantAnswerResponse;
+import com.app.decisioniq.api.assistant.validation.QuestionValidation;
 import com.app.decisioniq.assistant.orchestration.DecisionAssistantOrchestrator;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -28,29 +29,8 @@ public class AgentApi {
             consumes = MediaType.APPLICATION_JSON_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public AssistantAnswerResponse askAgent(@RequestBody AssistantAskRequest request) {
-        return answerQuestion(request.question());
-    }
-
-    @PostMapping(
-            value = "/ask",
-            consumes = MediaType.TEXT_PLAIN_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE
-    )
-    public AssistantAnswerResponse askLegacyAgent(@RequestBody String question) {
-        return answerQuestion(question);
-    }
-
-    private AssistantAnswerResponse answerQuestion(String question) {
-        String normalizedQuestion = normalizeQuestion(question);
-        String answer = decisionAssistantOrchestrator.answerQuestion(normalizedQuestion);
+    public AssistantAnswerResponse askLegacyAgent(@RequestBody AssistantAskRequest assistantAskRequest) {
+        String answer = decisionAssistantOrchestrator.answerQuestion(QuestionValidation.normalizeQuestion(assistantAskRequest));
         return new AssistantAnswerResponse(answer);
-    }
-
-    private static String normalizeQuestion(String question) {
-        if (question == null || question.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Question is required");
-        }
-        return question.trim();
     }
 }

@@ -2,8 +2,13 @@ package com.app.decisioniq.assistant.planning.model;
 
 import com.app.decisioniq.assistant.intent.type.DecisionIqIntent;
 import lombok.Data;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
+import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Internal data-getQuery plan produced by getQuery planning.
@@ -12,11 +17,13 @@ import java.util.List;
  * required for the parsed user intent. It does not execute SQL, call Milvus, or call the LLM.</p>
  */
 @Data
-public class QueryPlan {
+public class QueryPlan implements Serializable {
 
     private String tenantId;
     private String transactionId;
     private List<DecisionIqIntent> intents;
-    private SqlData sql;
     private RagData rag;
+    private Map<String,MultiValueMap<String,List<String >>> sqlTableFieldsMap =new HashMap<>();
+    private Map<String,List<String>> ragMap=new HashMap<>();
+    private String ragCollectionName;
 }

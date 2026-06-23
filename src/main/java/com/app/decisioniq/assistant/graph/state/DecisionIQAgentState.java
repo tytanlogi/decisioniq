@@ -14,6 +14,11 @@ public class DecisionIQAgentState extends AgentState {
         super(initData);
     }
 
+    public String tenantId(){
+        return this.<String>value(DecisionGraphStateKey.TENANT_ID_KEY)
+                .orElseThrow(()->new IllegalStateException("TenantId is not found"));
+    }
+
     public String question() {
         return this.<String>value(DecisionGraphStateKey.QUESTION_KEY)
                 .orElseThrow(() -> new IllegalStateException("Question missing from graph state"));
@@ -28,11 +33,12 @@ public class DecisionIQAgentState extends AgentState {
     }
 
     public Optional<QueryPlan> getQuery() {
-        return this.<QueryPlan>value(DecisionGraphStateKey.QUERY_PLANNING_KEY);
+        return this.value(DecisionGraphStateKey.QUERY_PLANNING_KEY);
     }
 
     public String answer() {
         return this.<String>value(DecisionGraphStateKey.ANSWER_KEY)
                 .orElseThrow(() -> new IllegalStateException("Answer missing from graph state"));
     }
+
 }
