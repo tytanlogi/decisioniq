@@ -3,6 +3,11 @@ spring:
     name: decisioniq
   config:
     import: classpath:decisioniq-data-slices.yaml
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/diq}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
 openai:
   base-url: https://api.openai.com/v1
   api-key: ${OPENAI_API_KEY}

@@ -1,5 +1,6 @@
 package com.app.decisioniq.assistant.graph.state;
 
+import com.app.decisioniq.assistant.evidence.model.ExtractedData;
 import com.app.decisioniq.assistant.graph.constant.DecisionGraphStateKey;
 import com.app.decisioniq.assistant.intent.model.ParsedQuestion;
 import com.app.decisioniq.assistant.planning.model.QueryPlan;
@@ -33,9 +34,8 @@ public class DecisionIQAgentState extends AgentState {
     }
 
     //Need to change the return type
-    public String collectEvidence(){
-        return this.<String>value(DecisionGraphStateKey.EVIDENCE_COLLECTION_KEY)
-                .orElseThrow(() -> new IllegalStateException("Question missing from graph state"));
+    public Optional<ExtractedData> collectEvidence() {
+        return this.value(DecisionGraphStateKey.EVIDENCE_COLLECTION_KEY);
     }
 
     public Optional<QueryPlan> getQuery() {
