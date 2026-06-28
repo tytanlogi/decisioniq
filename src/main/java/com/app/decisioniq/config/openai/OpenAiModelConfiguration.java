@@ -1,4 +1,4 @@
-package com.app.decisioniq.llm.provider.openai;
+package com.app.decisioniq.config.openai;
 
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.openai.OpenAiResponsesChatModel;

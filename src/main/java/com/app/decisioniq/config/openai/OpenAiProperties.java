@@ -1,4 +1,4 @@
-package com.app.decisioniq.llm.provider.openai;
+package com.app.decisioniq.config.openai;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

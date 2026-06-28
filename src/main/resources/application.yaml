@@ -12,3 +12,10 @@ openai:
   base-url: https://api.openai.com/v1
   api-key: ${OPENAI_API_KEY}
   model: ${MODEL_NAME}
+decisioniq:
+  embedding:
+    onnx:
+      enabled: ${DECISIONIQ_EMBEDDING_ONNX_ENABLED:false}
+      model-path: ${DECISIONIQ_EMBEDDING_ONNX_MODEL_PATH:}
+      tokenizer-path: ${DECISIONIQ_EMBEDDING_ONNX_TOKENIZER_PATH:}
+      dimension: ${DECISIONIQ_EMBEDDING_ONNX_DIMENSION:384}

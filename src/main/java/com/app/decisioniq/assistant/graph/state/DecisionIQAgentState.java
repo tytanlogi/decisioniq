@@ -20,6 +20,12 @@ public class DecisionIQAgentState extends AgentState {
                 .orElseThrow(()->new IllegalStateException("TenantId is not found"));
     }
 
+    public boolean isQuestionSemanticallyValid(){
+        return this.<Boolean>value(DecisionGraphStateKey.SEMANTIC_VALIDATION_KEY)
+                .orElseThrow(() -> new IllegalStateException("Question missing from graph state"));
+
+    }
+
     public String question() {
         return this.<String>value(DecisionGraphStateKey.QUESTION_KEY)
                 .orElseThrow(() -> new IllegalStateException("Question missing from graph state"));

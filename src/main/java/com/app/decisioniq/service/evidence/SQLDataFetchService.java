@@ -44,19 +44,12 @@ public class SQLDataFetchService {
     private MultiValueMap<String, List<Map<String, Object>>> initiateQueryBuildingPerIntent(MultiValueMap<String,List<String>> tableToFieldsMap, QueryPlan queryPlan){
 
         MultiValueMap<String,List<Map<String,Object>>> multiValueTableDataMap=new LinkedMultiValueMap<>();
-        List<List<Map<String, @Nullable Object>>> rowDataList=new LinkedList<>();
         for (Map.Entry<String,List<List<String>>> sqlTableFields:tableToFieldsMap.entrySet()){
             String tableName=sqlTableFields.getKey();
             List<List<String>> fieldsValueList = sqlTableFields.getValue();
-            if (fieldsValueList.size()==1){
-                String fields = String.join(",", fieldsValueList.get(0));
-                List<Map<String, @Nullable Object>> maps = buildAndExecuteDynamicQueryPerTable(tableName, fields, queryPlan);
+            for (List<String> fieldList:fieldsValueList){
+                String fields = String.join(",", fieldList);
                 insertDataToMultiMap(tableName,multiValueTableDataMap,buildAndExecuteDynamicQueryPerTable(tableName, fields, queryPlan));
-            }else{
-                for (List<String> fieldList:fieldsValueList){
-                    String fields = String.join(",", fieldList);
-                    insertDataToMultiMap(tableName,multiValueTableDataMap,buildAndExecuteDynamicQueryPerTable(tableName, fields, queryPlan));
-                }
             }
         }
         return multiValueTableDataMap;
@@ -65,11 +58,12 @@ public class SQLDataFetchService {
     private List<Map<String, @Nullable Object>> buildAndExecuteDynamicQueryPerTable(String tableName, String fields, QueryPlan queryPlan){
         String sql = String.format("""
                         SELECT %s FROM %s
-                        where transaction_id = ?
+                        where tenant_id = ?
+                          and transaction_id = ?
                         """,
                 fields,tableName);
         log.info("Query:{}",sql);
-        return jdbcTemplate.queryForList(sql,queryPlan.getTransactionId());
+        return jdbcTemplate.queryForList(sql, queryPlan.getTenantId(), queryPlan.getTransactionId());
     }
 
     private void insertDataToMultiMap(String tableName, MultiValueMap<String,List<Map<String,Object>>> multiValueTableDataMap,

@@ -5,6 +5,7 @@ public final class DecisionGraphNode {
     private DecisionGraphNode() {
     }
 
+    public static final String SEMANTIC_VALIDATION = "semantic_validation";
     public static final String INTENT_UNDERSTANDING = "intent_understanding";
     public static final String INTENT_CLARIFICATION = "intent_clarification";
     public static final String QUERY_PLANNING = "query_planning";

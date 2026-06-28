@@ -20,21 +20,31 @@ import java.util.Optional;
 public class DecisionGraphConfiguration {
 
     @Bean
-    public CompiledGraph<DecisionIQAgentState> decisionAssistantGraph(IntentUnderstandingNode intentUnderstandingNode,
-            IntentClarificationNode intentClarificationNode,
-            QueryPlanningNode queryPlanningNode,
-            EvidenceCollectionNode evidenceCollectionNode,
-            AnswerGenerationNode answerGenerationNode
+    public CompiledGraph<DecisionIQAgentState> decisionAssistantGraph(SemanticValidationNode semanticValidationNode,
+                                                                      IntentUnderstandingNode intentUnderstandingNode,
+                                                                      IntentClarificationNode intentClarificationNode,
+                                                                      QueryPlanningNode queryPlanningNode,
+                                                                      EvidenceCollectionNode evidenceCollectionNode,
+                                                                      AnswerGenerationNode answerGenerationNode
     ) throws GraphStateException {
         StateGraph<DecisionIQAgentState> graph = new StateGraph<>(DecisionIQAgentState::new);
 
+        graph.addNode(DecisionGraphNode.SEMANTIC_VALIDATION,AsyncNodeAction.node_async(semanticValidationNode));
+        graph.addConditionalEdges(
+                DecisionGraphNode.SEMANTIC_VALIDATION,
+                AsyncEdgeAction.edge_async(this::routeAfterSemanticValidation),
+                EdgeMappings.builder()
+                        .to(DecisionGraphNode.INTENT_CLARIFICATION,"clarification")
+                        .to(DecisionGraphNode.INTENT_UNDERSTANDING,"continue")
+                        .build()
+        );
         graph.addNode(DecisionGraphNode.INTENT_UNDERSTANDING, AsyncNodeAction.node_async(intentUnderstandingNode));
         graph.addNode(DecisionGraphNode.INTENT_CLARIFICATION, AsyncNodeAction.node_async(intentClarificationNode));
         graph.addNode(DecisionGraphNode.QUERY_PLANNING, AsyncNodeAction.node_async(queryPlanningNode));
         graph.addNode(DecisionGraphNode.EVIDENCE_COLLECTION,AsyncNodeAction.node_async(evidenceCollectionNode));
         graph.addNode(DecisionGraphNode.ANSWER_GENERATION, AsyncNodeAction.node_async(answerGenerationNode));
 
-        graph.addEdge(GraphDefinition.START, DecisionGraphNode.INTENT_UNDERSTANDING);
+        graph.addEdge(GraphDefinition.START, DecisionGraphNode.SEMANTIC_VALIDATION);
         graph.addConditionalEdges(
                 DecisionGraphNode.INTENT_UNDERSTANDING,
                 AsyncEdgeAction.edge_async(this::routeAfterIntentClarification),
@@ -49,6 +59,14 @@ public class DecisionGraphConfiguration {
         graph.addEdge(DecisionGraphNode.ANSWER_GENERATION, GraphDefinition.END);
 
         return graph.compile();
+    }
+
+    private String routeAfterSemanticValidation(DecisionIQAgentState state){
+        boolean questionSemanticallyValid = state.isQuestionSemanticallyValid();
+        if (!questionSemanticallyValid){
+            return "clarification";
+        }
+        return "continue";
     }
 
     private String routeAfterIntentClarification(DecisionIQAgentState state){

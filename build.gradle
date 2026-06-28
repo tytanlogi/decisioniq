@@ -47,6 +47,15 @@ dependencies {
 	runtimeOnly 'org.postgresql:postgresql'
 	implementation("org.springframework:spring-jdbc:7.0.8")
 
+	//milvus
+	implementation 'io.milvus:milvus-sdk-java:2.6.18'
+
+	// Source: https://mvnrepository.com/artifact/com.microsoft.onnxruntime/onnxruntime
+	implementation("com.microsoft.onnxruntime:onnxruntime:1.26.0")
+
+	// Source: https://mvnrepository.com/artifact/ai.djl.huggingface/tokenizers
+	implementation("ai.djl.huggingface:tokenizers:0.36.0")
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
