@@ -56,6 +56,8 @@ dependencies {
 	// Source: https://mvnrepository.com/artifact/ai.djl.huggingface/tokenizers
 	implementation("ai.djl.huggingface:tokenizers:0.36.0")
 
+	implementation "org.springframework.boot:spring-boot-starter-data-redis"
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
