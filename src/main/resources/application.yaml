@@ -1,26 +1,11 @@
 spring:
   application:
     name: decisioniq
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      timeout: 2s
   config:
-    import: classpath:decisioniq-data-slices.yaml
-  datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/diq}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:password}
-    driver-class-name: org.postgresql.Driver
-openai:
-  base-url: https://api.openai.com/v1
-  api-key: ${OPENAI_API_KEY}
-  model: ${MODEL_NAME}
+    import:
+      - classpath:guardrail.yaml
+      - classpath:catalog-relevance.yaml
+      - classpath:operation-policy.yaml
 decisioniq:
-  embedding:
-    onnx:
-      enabled: ${DECISIONIQ_EMBEDDING_ONNX_ENABLED:false}
-      model-path: ${DECISIONIQ_EMBEDDING_ONNX_MODEL_PATH:}
-      tokenizer-path: ${DECISIONIQ_EMBEDDING_ONNX_TOKENIZER_PATH:}
-      dimension: ${DECISIONIQ_EMBEDDING_ONNX_DIMENSION:384}
+  logging:
+    file: ${DECISIONIQ_LOG_FILE:logs/decisioniq-agent.log}

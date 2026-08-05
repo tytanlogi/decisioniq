@@ -19,49 +19,17 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'edu.stanford.nlp:stanford-corenlp:4.5.10'
+	runtimeOnly 'edu.stanford.nlp:stanford-corenlp:4.5.10:models'
+
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 
-	/*
-	 * LangGraph4j is used as the assistant workflow orchestrator.
-	 */
-	implementation platform("org.bsc.langgraph4j:langgraph4j-bom:1.8.17")
-
-	// Core graph runtime: StateGraph, nodes, edges, compiled graph, routing, and graph execution.
-	implementation "org.bsc.langgraph4j:langgraph4j-core"
-
-	// Integration helpers for using LangChain4j models/tools inside LangGraph4j graph nodes.
-	implementation "org.bsc.langgraph4j:langgraph4j-langchain4j"
-
-	// Optional graph checkpoint persistence for resumable/debuggable workflows backed by Postgres.
-	implementation "org.bsc.langgraph4j:langgraph4j-postgres-saver"
-
-	// Source: https://mvnrepository.com/artifact/dev.langchain4j/langchain4j
-	implementation("dev.langchain4j:langchain4j:1.15.0")
-	// OpenAI model provider for hosted intent parsing and final answer generation.
-	// Keep this provider isolated so other providers can be added without changing assistant logic.
-	implementation("dev.langchain4j:langchain4j-open-ai:1.15.0")
-
-	// Source: https://mvnrepository.com/artifact/org.springframework/spring-jdbc
-	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
-	runtimeOnly 'org.postgresql:postgresql'
-	implementation("org.springframework:spring-jdbc:7.0.8")
-
-	//milvus
-	implementation 'io.milvus:milvus-sdk-java:2.6.18'
-
-	// Source: https://mvnrepository.com/artifact/com.microsoft.onnxruntime/onnxruntime
-	implementation("com.microsoft.onnxruntime:onnxruntime:1.26.0")
-
-	// Source: https://mvnrepository.com/artifact/ai.djl.huggingface/tokenizers
-	implementation("ai.djl.huggingface:tokenizers:0.36.0")
-
-	implementation "org.springframework.boot:spring-boot-starter-data-redis"
-
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testCompileOnly 'org.projectlombok:lombok'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testAnnotationProcessor 'org.projectlombok:lombok'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
