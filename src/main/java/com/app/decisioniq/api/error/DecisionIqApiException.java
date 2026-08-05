@@ -1,0 +1,86 @@
+package com.app.decisioniq.api.error;
+
+import com.app.decisioniq.application.assistant.AssistantRequestResult;
+import com.app.decisioniq.domain.catalog.CatalogRelevanceDecision;
+import com.app.decisioniq.domain.guardrail.GuardrailDecision;
+import org.springframework.http.HttpStatus;
+
+public class DecisionIqApiException extends RuntimeException {
+
+    private final HttpStatus status;
+    private final String code;
+    private final GuardrailDecision guardrailDecision;
+    private final CatalogRelevanceDecision catalogRelevanceDecision;
+    private final AssistantRequestResult requestResult;
+
+    public DecisionIqApiException(
+            HttpStatus status,
+            String code,
+            String message,
+            GuardrailDecision guardrailDecision
+    ) {
+        this(status, code, message, guardrailDecision, null);
+    }
+
+    public DecisionIqApiException(
+            HttpStatus status,
+            String code,
+            String message,
+            GuardrailDecision guardrailDecision,
+            CatalogRelevanceDecision catalogRelevanceDecision
+    ) {
+        this(status, code, message, guardrailDecision, catalogRelevanceDecision, null);
+    }
+
+    public DecisionIqApiException(
+            HttpStatus status,
+            String code,
+            String message,
+            AssistantRequestResult requestResult
+    ) {
+        this(
+                status,
+                code,
+                message,
+                requestResult.guardrailDecision(),
+                requestResult.catalogRelevanceDecision(),
+                requestResult
+        );
+    }
+
+    private DecisionIqApiException(
+            HttpStatus status,
+            String code,
+            String message,
+            GuardrailDecision guardrailDecision,
+            CatalogRelevanceDecision catalogRelevanceDecision,
+            AssistantRequestResult requestResult
+    ) {
+        super(message);
+        this.status = status;
+        this.code = code;
+        this.guardrailDecision = guardrailDecision;
+        this.catalogRelevanceDecision = catalogRelevanceDecision;
+        this.requestResult = requestResult;
+    }
+
+    public HttpStatus status() {
+        return status;
+    }
+
+    public String code() {
+        return code;
+    }
+
+    public GuardrailDecision guardrailDecision() {
+        return guardrailDecision;
+    }
+
+    public CatalogRelevanceDecision catalogRelevanceDecision() {
+        return catalogRelevanceDecision;
+    }
+
+    public AssistantRequestResult requestResult() {
+        return requestResult;
+    }
+}

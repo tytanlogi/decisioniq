@@ -1,0 +1,125 @@
+package com.app.decisioniq.config.guardrail;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
+
+import java.util.List;
+
+@Validated
+@ConfigurationProperties(prefix = "decisioniq.guardrails")
+public record GuardrailProperties(
+        @NotBlank
+        @Pattern(regexp = "[A-Za-z0-9._-]{1,32}")
+        String version,
+        @NotNull @Valid Limits limits,
+        @NotNull @Valid Normalization normalization,
+        @NotNull @Valid Vocabulary vocabulary,
+        @NotNull @Valid Patterns patterns,
+        @NotNull @Valid Detectors detectors,
+        @NotNull @Valid Responses responses
+) {
+
+    public record Limits(
+            @Min(1) @Max(8192) int maxQuestionCharacters,
+            @Min(1) @Max(256) int maxTenantIdCharacters,
+            @Min(1) @Max(256) int maxUserIdCharacters,
+            @Min(1) @Max(256) int maxConversationIdCharacters,
+            @Min(1) @Max(200) int maxDesignationCharacters
+    ) {
+    }
+
+    public record Normalization(
+            boolean collapseWhitespace,
+            @Min(1) @Max(3) int repeatedPunctuationLimit,
+            @Min(1) @Max(3) int ellipsisLimit
+    ) {
+    }
+
+    public record Vocabulary(
+            @NotEmpty @Size(max = 80)
+            List<@NotBlank @Size(max = 40) String> mutationAliases,
+            @NotEmpty @Size(max = 80)
+            List<@NotBlank @Size(max = 60) String> mutationDomainObjects
+    ) {
+
+        public Vocabulary {
+            mutationAliases = immutable(mutationAliases);
+            mutationDomainObjects = immutable(mutationDomainObjects);
+        }
+
+        private static List<String> immutable(List<String> values) {
+            return values == null ? null : List.copyOf(values);
+        }
+    }
+
+    public record Detectors(
+            @NotEmpty @Size(max = 8)
+            List<@NotNull DetectorId> enabled
+    ) {
+
+        public Detectors {
+            enabled = enabled == null ? null : List.copyOf(enabled);
+        }
+    }
+
+    public record Patterns(
+            @NotBlank @Size(max = 512) String correlationId,
+            @NotNull @Valid DetectorPatterns detectors,
+            @NotNull @Valid MutationPatterns mutation
+    ) {
+    }
+
+    public record DetectorPatterns(
+            @NotEmpty @Size(max = 32) List<@NotNull @Valid PatternDefinition> rawSql,
+            @NotEmpty @Size(max = 16) List<@NotNull @Valid PatternDefinition> scriptAttack,
+            @NotEmpty @Size(max = 32) List<@NotNull @Valid PatternDefinition> instructionBypass
+    ) {
+
+        public DetectorPatterns {
+            rawSql = rawSql == null ? null : List.copyOf(rawSql);
+            scriptAttack = scriptAttack == null ? null : List.copyOf(scriptAttack);
+            instructionBypass = instructionBypass == null ? null : List.copyOf(instructionBypass);
+        }
+    }
+
+    public record MutationPatterns(
+            @NotBlank @Size(max = 1500) String domainObjectTemplate
+    ) {
+    }
+
+    public record PatternDefinition(
+            @NotBlank @Pattern(regexp = "[a-z][a-z0-9.-]{1,63}") String id,
+            @NotBlank @Size(max = 1500) String expression
+    ) {
+    }
+
+    public enum DetectorId {
+        RAW_SQL,
+        SCRIPT_ATTACK,
+        INSTRUCTION_BYPASS,
+        UNSUPPORTED_MUTATION
+    }
+
+    public record Responses(
+            @NotNull @Valid ResponseTemplate blockedUnsupportedContent,
+            @NotNull @Valid ResponseTemplate requestInvalid,
+            @NotNull @Valid ResponseTemplate interpretationNotImplemented,
+            @NotNull @Valid ResponseTemplate unsupportedMediaType,
+            @NotNull @Valid ResponseTemplate internalError
+    ) {
+    }
+
+    public record ResponseTemplate(
+            @NotBlank @Pattern(regexp = "[A-Z][A-Z0-9_]{2,63}") String code,
+            @NotBlank @Size(max = 500) String message
+    ) {
+    }
+}

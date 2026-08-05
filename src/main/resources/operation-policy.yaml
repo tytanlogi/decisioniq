@@ -1,0 +1,108 @@
+decisioniq:
+  operation-policy:
+    version: "1.0"
+    actions:
+      read:
+        - access
+        - calculate
+        - compare
+        - count
+        - describe
+        - display
+        - explain
+        - fetch
+        - find
+        - get
+        - give
+        - list
+        - read
+        - retrieve
+        - search
+        - show
+        - summarize
+        - tell
+        - view
+      presentation:
+        - chart
+        - format
+        - graph
+        - render
+        - tabulate
+        - visualize
+      construct:
+        - build
+        - create
+        - generate
+        - make
+        - produce
+      persist:
+        - archive
+        - commit
+        - persist
+        - save
+        - store
+        - write
+      modify:
+        - approve
+        - block
+        - cancel
+        - change
+        - decline
+        - delete
+        - erase
+        - mark
+        - modify
+        - purge
+        - refund
+        - remove
+        - retry
+        - reverse
+        - unblock
+        - update
+      transfer:
+        - copy
+        - download
+        - export
+        - move
+        - upload
+      external:
+        - email
+        - message
+        - notify
+        - publish
+        - send
+    targets:
+      presentation:
+        - chart
+        - dashboard
+        - graph
+        - list
+        - output
+        - report
+        - response
+        - result
+        - summary
+        - table
+        - view
+      persistent:
+        - cache
+        - database
+        - datastore
+        - db
+        - file
+        - filesystem
+        - index
+        - queue
+        - repository
+        - schema
+        - storage
+        - store
+        - system
+        - topic
+      domain-data:
+        - case
+        - decision
+        - evidence
+        - payment
+        - record
+        - transaction

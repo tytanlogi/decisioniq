@@ -1,0 +1,142 @@
+decisioniq:
+  guardrails:
+    version: "1.3"
+    limits:
+      max-question-characters: 4000
+      max-tenant-id-characters: 128
+      max-user-id-characters: 128
+      max-conversation-id-characters: 128
+      max-designation-characters: 100
+    normalization:
+      collapse-whitespace: true
+      repeated-punctuation-limit: 1
+      ellipsis-limit: 3
+    vocabulary:
+      mutation-aliases:
+        - delete
+        - remove
+        - erase
+        - purge
+        - update
+        - modify
+        - change
+        - mark
+        - create
+        - insert
+        - approve
+        - decline
+        - block
+        - unblock
+        - reverse
+        - refund
+        - retry
+        - cancel
+      mutation-domain-objects:
+        - transaction
+        - transactions
+        - payment
+        - payments
+        - case
+        - cases
+        - record
+        - records
+        - decision
+        - decisions
+    patterns:
+      correlation-id: >-
+        [A-Za-z0-9][A-Za-z0-9._-]{0,63}
+      detectors:
+        raw-sql:
+          - id: sql.union-select
+            expression: >-
+              (?is)\bunion\s+(?:all\s+)?select\b
+          - id: sql.select-from
+            expression: >-
+              (?is)\bselect\s*(?:\*\s*from\b|[a-z_][a-z0-9_]*(?:\s*,\s*[a-z_][a-z0-9_]*)*\s+from\b)\s+[a-z_][a-z0-9_]*
+          - id: sql.select-aggregate
+            expression: >-
+              (?is)\bselect\s+(?:count|sum|avg|min|max)\s*\(\s*(?:\*|(?:[a-z_][a-z0-9_]*\.)?[a-z_][a-z0-9_]*)\s*\)\s+from\s+(?:"[^"\r\n]{1,128}"|[a-z_][a-z0-9_]*)
+          - id: sql.select-quoted-identifiers
+            expression: >-
+              (?is)\bselect\s+"[^"\r\n]{1,128}"(?:\s*,\s*"[^"\r\n]{1,128}")*\s+from\s+"[^"\r\n]{1,128}"
+          - id: sql.ddl
+            expression: >-
+              (?is)\b(?:drop|truncate|alter)\s+(?:table|database|schema)\b
+          - id: sql.insert
+            expression: >-
+              (?is)\binsert\s+into\s+[a-z_][a-z0-9_]*
+          - id: sql.update
+            expression: >-
+              (?is)\bupdate\s+[a-z_][a-z0-9_]*\s+set\b
+          - id: sql.delete
+            expression: >-
+              (?is)\bdelete\s+from\s+[a-z_][a-z0-9_]*
+          - id: sql.copy
+            expression: >-
+              (?is)\bcopy\s+(?:"[^"\r\n]{1,128}"|[a-z_][a-z0-9_.]*)\s+(?:to|from)\s+(?:std(?:out|in)\b|program\b|['"])
+          - id: sql.call-execute
+            expression: >-
+              (?is)\b(?:call|execute|exec)\s+(?:"[^"\r\n]{1,128}"|[a-z_][a-z0-9_.]*)\s*(?:\(|\b)
+          - id: sql.privilege
+            expression: >-
+              (?is)\b(?:grant|revoke)\s+(?:select|insert|update|delete|all|usage|execute)\b.{0,256}?\b(?:on|from|to)\b
+          - id: sql.tautology
+            expression: >-
+              (?is)\bor\s+['"]?1['"]?\s*=\s*['"]?1['"]?
+          - id: sql.comments-catalog
+            expression: >-
+              (?is)(--|/\*|\*/|\binformation_schema\b|\bpg_catalog\b)
+        script-attack:
+          - id: script.executable-content
+            expression: >-
+              (?is)(<\s*script\b|javascript\s*:|\$\{\s*jndi\s*:|<\s*(?:iframe|object|embed)\b|<\s*(?:img|svg)\b[^>]{0,512}\b(?:onerror|onload)\s*=)
+        instruction-bypass:
+          - id: bypass.ignore-instructions
+            expression: >-
+              (?is)\bignore\s+(?:all\s+)?(?:previous|prior|system|developer|safety|security)\s+(?:instructions?|polic(?:y|ies)|rules?)\b
+          - id: bypass.disregard-instructions
+            expression: >-
+              (?is)\bdisregard\s+(?:all\s+)?(?:previous|prior|system|developer|your)\s+instructions?\b
+          - id: bypass.reveal-prompt
+            expression: >-
+              (?is)\b(?:reveal|print|show|return)\s+(?:the\s+)?(?:system|developer)\s+(?:prompt|message|instructions?)\b
+          - id: bypass.guardrails
+            expression: >-
+              (?is)\bbypass\s+(?:the\s+)?(?:guardrails?|safety|policy|restrictions?)\b
+          - id: bypass.unrestricted-role
+            expression: >-
+              (?is)\bact\s+as\s+(?:an?\s+)?(?:unrestricted|unfiltered|jailbroken)\b
+          - id: bypass.forget-instructions
+            expression: >-
+              (?is)\bforget\s+(?:all\s+)?(?:previous|prior|system|developer|safety|security)\s+(?:instructions?|polic(?:y|ies)|rules?)\b
+          - id: bypass.override-policy
+            expression: >-
+              (?is)\boverride\s+(?:the\s+)?(?:safety|security|system|developer|guardrail)\s+(?:instructions?|polic(?:y|ies)|rules?|restrictions?)\b
+          - id: bypass.no-restrictions-roleplay
+            expression: >-
+              (?is)\bpretend\s+(?:that\s+)?there\s+(?:are|is)\s+no\s+(?:restrictions?|guardrails?|safety\s+rules?)\b
+      mutation:
+        domain-object-template: >-
+          (?i)\b(?:{{actions}})\b\s+(?:(?:a|an|the|all|any|every|these|those)\s+)?(?:{{objects}}|it|this|that|them)\b
+    detectors:
+      enabled:
+        - RAW_SQL
+        - SCRIPT_ATTACK
+        - INSTRUCTION_BYPASS
+        - UNSUPPORTED_MUTATION
+    responses:
+      blocked-unsupported-content:
+        code: UNSUPPORTED_OR_UNSAFE_REQUEST
+        message: DecisionIQ provides read-only decision assistance using existing data. Write operations, raw SQL, and instruction-bypass requests are not supported.
+      request-invalid:
+        code: REQUEST_INVALID
+        message: The DecisionIQ request is missing, malformed, or exceeds an allowed limit.
+      interpretation-not-implemented:
+        code: INTERPRETATION_NOT_IMPLEMENTED
+        message: The request passed Phase 1 guardrails, but read-only interpretation is not implemented yet.
+      unsupported-media-type:
+        code: UNSUPPORTED_MEDIA_TYPE
+        message: Content-Type must be application/json.
+      internal-error:
+        code: INTERNAL_ERROR
+        message: DecisionIQ could not process the request.

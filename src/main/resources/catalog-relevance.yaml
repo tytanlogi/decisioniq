@@ -1,0 +1,22 @@
+decisioniq:
+  catalog-relevance:
+    base-url: ${CATALOG_SERVICE_URL:http://localhost:8081}
+    connect-timeout: ${CATALOG_CONNECT_TIMEOUT:1s}
+    read-timeout: ${CATALOG_READ_TIMEOUT:3s}
+    # Provisional MiniLM cosine thresholds. Promote only after benchmark calibration.
+    supported-score: ${CATALOG_SUPPORTED_SCORE:0.30}
+    ambiguous-score: ${CATALOG_AMBIGUOUS_SCORE:0.18}
+    low-information-term-limit: ${CATALOG_LOW_INFORMATION_TERM_LIMIT:2}
+    responses:
+      ambiguous:
+        code: CATALOG_RELEVANCE_AMBIGUOUS
+        message: DecisionIQ cannot identify the requested read-only capability with enough confidence. Please clarify the question.
+      out-of-scope:
+        code: QUESTION_OUT_OF_SCOPE
+        message: DecisionIQ provides read-only assistance for existing transaction and decision evidence.
+      insufficient-context:
+        code: CONTEXT_REQUIRED
+        message: More context is required before DecisionIQ can identify the requested transaction or decision capability.
+      unavailable:
+        code: CATALOG_SERVICE_UNAVAILABLE
+        message: DecisionIQ cannot validate the requested capability because the catalog service is temporarily unavailable.
