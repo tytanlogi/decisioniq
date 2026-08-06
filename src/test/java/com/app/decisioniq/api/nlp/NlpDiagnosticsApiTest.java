@@ -49,7 +49,6 @@ class NlpDiagnosticsApiTest {
                 .andExpect(jsonPath("$[0].objects[0]").value("table"))
                 .andExpect(jsonPath("$[0].targets[0]").value("table"))
                 .andExpect(jsonPath("$[0].targets[1]").value("database"))
-                .andExpect(jsonPath("$[0].effect").value("PERSIST"))
-                .andExpect(jsonPath("$[0].certainty").value("EXPLICIT"));
+                .andExpect(jsonPath("$[0].effect").value("PERSIST"));
     }
 }

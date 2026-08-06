@@ -118,38 +118,6 @@ public class CatalogRelevanceService {
     }
 
     private CatalogRelevanceDecision aggregateFrameDecision(List<FrameDecision> decisions) {
-        if (decisions.stream().anyMatch(frameDecision ->
-                frameDecision.frame().effect()
-                        == NlpOperationFrame.Effect.UNRESOLVED_ACTION
-        )) {
-            return decision(
-                    CatalogRelevanceOutcome.AMBIGUOUS,
-                    aggregateMatches(decisions.stream().map(FrameDecision::decision).toList())
-            );
-        }
-
-        List<CatalogRelevanceDecision> meaningfulFailures = decisions.stream()
-                .filter(frameDecision -> frameDecision.frame().effect()
-                        != NlpOperationFrame.Effect.UNKNOWN)
-                .map(FrameDecision::decision)
-                .filter(decision -> decision.outcome() != CatalogRelevanceOutcome.SUPPORTED)
-                .toList();
-        if (meaningfulFailures.stream().anyMatch(decision ->
-                decision.outcome() == CatalogRelevanceOutcome.OUT_OF_SCOPE
-                        || decision.outcome() == CatalogRelevanceOutcome.INSUFFICIENT_CONTEXT
-        )) {
-            return decision(
-                    CatalogRelevanceOutcome.OUT_OF_SCOPE,
-                    aggregateMatches(meaningfulFailures)
-            );
-        }
-        if (!meaningfulFailures.isEmpty()) {
-            return decision(
-                    CatalogRelevanceOutcome.AMBIGUOUS,
-                    aggregateMatches(meaningfulFailures)
-            );
-        }
-
         List<CatalogRelevanceDecision> supported = decisions.stream()
                 .map(FrameDecision::decision)
                 .filter(decision -> decision.outcome() == CatalogRelevanceOutcome.SUPPORTED)

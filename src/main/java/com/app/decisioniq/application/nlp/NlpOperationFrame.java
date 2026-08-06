@@ -9,8 +9,7 @@ public record NlpOperationFrame(
         List<String> actions,
         List<String> objects,
         List<String> targets,
-        Effect effect,
-        Certainty certainty
+        Effect effect
 ) {
     public NlpOperationFrame {
         actions = List.copyOf(actions);
@@ -26,19 +25,10 @@ public record NlpOperationFrame(
     }
 
     public enum Effect {
-        READ,
-        PRESENT,
+        SAFE_CANDIDATE,
         PERSIST,
         MODIFY,
         TRANSFER,
-        EXTERNAL_ACTION,
-        UNRESOLVED_ACTION,
-        UNKNOWN
-    }
-
-    public enum Certainty {
-        EXPLICIT,
-        INFERRED,
-        UNKNOWN
+        EXTERNAL_ACTION
     }
 }

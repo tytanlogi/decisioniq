@@ -60,9 +60,36 @@ class PipelineDiagnosticsApiTest {
                 .andExpect(jsonPath("$.rejectedParts.length()").value(1))
                 .andExpect(jsonPath("$.rejectedParts[0].text")
                         .value("if it is then fuck off"))
-                .andExpect(jsonPath("$.rejectedParts[0].classification").value("UNKNOWN"))
+                .andExpect(jsonPath("$.rejectedParts[0].classification")
+                        .value("SAFE_CANDIDATE"))
                 .andExpect(jsonPath("$.rejectedParts[0].reason").value("OUT_OF_SCOPE"))
                 .andExpect(jsonPath("$.nlpAnalysis").doesNotExist())
                 .andExpect(jsonPath("$.catalogValidation").doesNotExist());
+    }
+
+    @Test
+    void removesDetachedNonDomainFragmentsAndKeepsSupportedContext() throws Exception {
+        when(catalogClient.search(
+                org.mockito.ArgumentMatchers.eq("Explain the decision"), anyString()
+        )).thenReturn(List.of(new Match("DECISION_EXPLANATION", 1, 0.52)));
+        when(catalogClient.search(
+                org.mockito.ArgumentMatchers.eq("for TXN-006451."), anyString()
+        )).thenReturn(List.of(new Match("TRANSACTION_DETAILS", 1, 0.45)));
+
+        mockMvc.perform(post("/internal/dev/pipeline/evaluate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "question": "Explain the decision, damn it, for TXN-006451.",
+                                  "conversationId": "test-conversation",
+                                  "tenantId": "tenant-citi-bank",
+                                  "userId": "analyst-1"
+                                }
+                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.questionForLlm")
+                        .value("Explain the decision for TXN-006451."))
+                .andExpect(jsonPath("$.rejectedParts.length()").value(1))
+                .andExpect(jsonPath("$.rejectedParts[0].text").value("damn it"));
     }
 }

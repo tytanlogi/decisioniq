@@ -7,16 +7,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import java.util.stream.Collectors;
 
 @Component
 public class GuardrailPatternRegistry {
 
-    private static final String ACTIONS_TOKEN = "{{actions}}";
-    private static final String OBJECTS_TOKEN = "{{objects}}";
     private final Pattern correlationId;
     private final Map<GuardrailProperties.DetectorId, List<Pattern>> detectorPatterns;
-    private final Pattern mutationDomainObject;
 
     public GuardrailPatternRegistry(GuardrailProperties properties) {
         this.correlationId = compile("correlation-id", properties.patterns().correlationId());
@@ -34,15 +30,6 @@ public class GuardrailPatternRegistry {
                 GuardrailProperties.DetectorId.INSTRUCTION_BYPASS,
                 compileDefinitions(properties.patterns().detectors().instructionBypass())
         );
-
-        String actions = alternatives(properties.vocabulary().mutationAliases());
-        String objects = alternatives(properties.vocabulary().mutationDomainObjects());
-        this.mutationDomainObject = compileTemplate(
-                "mutation-domain-object",
-                properties.patterns().mutation().domainObjectTemplate(),
-                actions,
-                objects
-        );
     }
 
     public Pattern correlationId() {
@@ -53,29 +40,10 @@ public class GuardrailPatternRegistry {
         return detectorPatterns.getOrDefault(detectorId, List.of());
     }
 
-    public Pattern mutationDomainObject() {
-        return mutationDomainObject;
-    }
-
     private List<Pattern> compileDefinitions(List<GuardrailProperties.PatternDefinition> definitions) {
         return definitions.stream()
                 .map(definition -> compile(definition.id(), definition.expression()))
                 .toList();
-    }
-
-    private Pattern compileTemplate(
-            String id,
-            String template,
-            String actions,
-            String objects
-    ) {
-        if (!template.contains(ACTIONS_TOKEN)) {
-            throw new IllegalStateException("Guardrail pattern " + id + " must contain " + ACTIONS_TOKEN);
-        }
-        String expression = template
-                .replace(ACTIONS_TOKEN, actions)
-                .replace(OBJECTS_TOKEN, objects);
-        return compile(id, expression);
     }
 
     private Pattern compile(String id, String expression) {
@@ -102,12 +70,5 @@ public class GuardrailPatternRegistry {
             }
         }
         return false;
-    }
-
-    private String alternatives(List<String> values) {
-        return values.stream()
-                .map(String::strip)
-                .map(Pattern::quote)
-                .collect(Collectors.joining("|"));
     }
 }

@@ -11,37 +11,6 @@ decisioniq:
       collapse-whitespace: true
       repeated-punctuation-limit: 1
       ellipsis-limit: 3
-    vocabulary:
-      mutation-aliases:
-        - delete
-        - remove
-        - erase
-        - purge
-        - update
-        - modify
-        - change
-        - mark
-        - create
-        - insert
-        - approve
-        - decline
-        - block
-        - unblock
-        - reverse
-        - refund
-        - retry
-        - cancel
-      mutation-domain-objects:
-        - transaction
-        - transactions
-        - payment
-        - payments
-        - case
-        - cases
-        - record
-        - records
-        - decision
-        - decisions
     patterns:
       correlation-id: >-
         [A-Za-z0-9][A-Za-z0-9._-]{0,63}
@@ -96,7 +65,7 @@ decisioniq:
               (?is)\bignore\s+(?:all\s+)?(?:previous|prior|system|developer|safety|security)\s+(?:instructions?|polic(?:y|ies)|rules?)\b
           - id: bypass.disregard-instructions
             expression: >-
-              (?is)\bdisregard\s+(?:all\s+)?(?:previous|prior|system|developer|your)\s+instructions?\b
+              (?is)\bdisregard\s+(?:all\s+)?(?:(?:the|your|any)\s+)*(?:previous|prior|system|developer|safety|security|guardrail)\s+(?:instructions?|polic(?:y|ies)|rules?|restrictions?)\b
           - id: bypass.reveal-prompt
             expression: >-
               (?is)\b(?:reveal|print|show|return)\s+(?:the\s+)?(?:system|developer)\s+(?:prompt|message|instructions?)\b
@@ -108,22 +77,18 @@ decisioniq:
               (?is)\bact\s+as\s+(?:an?\s+)?(?:unrestricted|unfiltered|jailbroken)\b
           - id: bypass.forget-instructions
             expression: >-
-              (?is)\bforget\s+(?:all\s+)?(?:previous|prior|system|developer|safety|security)\s+(?:instructions?|polic(?:y|ies)|rules?)\b
+              (?is)\bforget\s+(?:all\s+)?(?:(?:the|your|any)\s+)*(?:previous|prior|system|developer|safety|security|guardrail)\s+(?:instructions?|polic(?:y|ies)|rules?|restrictions?)\b
           - id: bypass.override-policy
             expression: >-
               (?is)\boverride\s+(?:the\s+)?(?:safety|security|system|developer|guardrail)\s+(?:instructions?|polic(?:y|ies)|rules?|restrictions?)\b
           - id: bypass.no-restrictions-roleplay
             expression: >-
               (?is)\bpretend\s+(?:that\s+)?there\s+(?:are|is)\s+no\s+(?:restrictions?|guardrails?|safety\s+rules?)\b
-      mutation:
-        domain-object-template: >-
-          (?i)\b(?:{{actions}})\b\s+(?:(?:a|an|the|all|any|every|these|those)\s+)?(?:{{objects}}|it|this|that|them)\b
     detectors:
       enabled:
         - RAW_SQL
         - SCRIPT_ATTACK
         - INSTRUCTION_BYPASS
-        - UNSUPPORTED_MUTATION
     responses:
       blocked-unsupported-content:
         code: UNSUPPORTED_OR_UNSAFE_REQUEST

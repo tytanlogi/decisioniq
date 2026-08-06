@@ -8,12 +8,12 @@ import com.app.decisioniq.application.nlp.NlpAnalysis;
 import com.app.decisioniq.application.nlp.NlpAnalyzer;
 import com.app.decisioniq.application.nlp.NlpOperationAnalyzer;
 import com.app.decisioniq.application.nlp.NlpOperationFrame;
+import com.app.decisioniq.application.nlp.OperationPolicyOutcome;
 import com.app.decisioniq.domain.catalog.CatalogRelevanceDecision;
 import com.app.decisioniq.domain.context.TrustedRequestContext;
 import com.app.decisioniq.domain.context.TrustedRequestContextResolver;
 import com.app.decisioniq.domain.guardrail.GuardrailDecision;
 import com.app.decisioniq.domain.guardrail.GuardrailOutcome;
-import com.app.decisioniq.domain.guardrail.GuardrailReasonCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -78,6 +78,7 @@ public class GuardedAssistantRequestService implements AssistantRequestUseCase {
         );
         NlpAnalysis analysis = null;
         List<NlpOperationFrame> frames = List.of();
+        OperationPolicyOutcome operationPolicyOutcome = OperationPolicyOutcome.NOT_EVALUATED;
         CatalogFrameValidation catalogValidation = null;
         String effectiveQuestion = null;
         CatalogRelevanceDecision relevanceDecision = null;
@@ -92,13 +93,9 @@ public class GuardedAssistantRequestService implements AssistantRequestUseCase {
                     frames.stream().map(NlpOperationFrame::effect).toList()
             );
             if (frames.stream().anyMatch(NlpOperationFrame::blocksRequest)) {
-                decision = new GuardrailDecision(
-                        GuardrailOutcome.BLOCKED_UNSUPPORTED_MUTATION,
-                        decision.normalizedQuestion(),
-                        GuardrailReasonCode.UNSUPPORTED_MUTATION,
-                        decision.auditFingerprint()
-                );
+                operationPolicyOutcome = OperationPolicyOutcome.BLOCKED_UNSUPPORTED_OPERATION;
             } else {
+                operationPolicyOutcome = OperationPolicyOutcome.ALLOWED;
                 catalogValidation = catalogRelevanceService.validateFrames(
                         frames,
                         command.correlationId()
@@ -112,8 +109,8 @@ public class GuardedAssistantRequestService implements AssistantRequestUseCase {
                 command.requestId(),
                 decision,
                 relevanceDecision,
-                analysis,
                 frames,
+                operationPolicyOutcome,
                 catalogValidation,
                 effectiveQuestion
         );

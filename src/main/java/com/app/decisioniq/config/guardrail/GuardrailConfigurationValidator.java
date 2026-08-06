@@ -5,7 +5,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 
 @Component
@@ -14,8 +13,7 @@ public class GuardrailConfigurationValidator {
     private static final Set<GuardrailProperties.DetectorId> REQUIRED_SECURITY_DETECTORS = Set.of(
             GuardrailProperties.DetectorId.RAW_SQL,
             GuardrailProperties.DetectorId.SCRIPT_ATTACK,
-            GuardrailProperties.DetectorId.INSTRUCTION_BYPASS,
-            GuardrailProperties.DetectorId.UNSUPPORTED_MUTATION
+            GuardrailProperties.DetectorId.INSTRUCTION_BYPASS
     );
 
     private final GuardrailProperties properties;
@@ -26,8 +24,6 @@ public class GuardrailConfigurationValidator {
 
     @PostConstruct
     public void validateConfiguration() {
-        requireUniqueIgnoringCase("mutation aliases", properties.vocabulary().mutationAliases());
-        requireUniqueIgnoringCase("mutation domain objects", properties.vocabulary().mutationDomainObjects());
         requireUniquePatternIds("raw SQL patterns", properties.patterns().detectors().rawSql());
         requireUniquePatternIds("script attack patterns", properties.patterns().detectors().scriptAttack());
         requireUniquePatternIds(
@@ -54,15 +50,6 @@ public class GuardrailConfigurationValidator {
     private <T> void requireUnique(String name, List<T> values) {
         if (new HashSet<>(values).size() != values.size()) {
             throw new IllegalStateException("Guardrail " + name + " must not contain duplicates");
-        }
-    }
-
-    private void requireUniqueIgnoringCase(String name, List<String> values) {
-        Set<String> normalized = new HashSet<>();
-        for (String value : values) {
-            if (!normalized.add(value.strip().toLowerCase(Locale.ROOT))) {
-                throw new IllegalStateException("Guardrail " + name + " must not contain duplicates");
-            }
         }
     }
 

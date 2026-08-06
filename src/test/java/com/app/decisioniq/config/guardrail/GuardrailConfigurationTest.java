@@ -22,8 +22,7 @@ class GuardrailConfigurationTest {
         assertThat(properties.detectors().enabled()).containsExactly(
                 GuardrailProperties.DetectorId.RAW_SQL,
                 GuardrailProperties.DetectorId.SCRIPT_ATTACK,
-                GuardrailProperties.DetectorId.INSTRUCTION_BYPASS,
-                GuardrailProperties.DetectorId.UNSUPPORTED_MUTATION
+                GuardrailProperties.DetectorId.INSTRUCTION_BYPASS
         );
         assertThat(properties.responses().blockedUnsupportedContent().message())
                 .contains("read-only decision assistance")
@@ -56,12 +55,10 @@ class GuardrailConfigurationTest {
                 properties.version(),
                 properties.limits(),
                 properties.normalization(),
-                properties.vocabulary(),
                 properties.patterns(),
                 new GuardrailProperties.Detectors(List.of(
                         GuardrailProperties.DetectorId.RAW_SQL,
-                        GuardrailProperties.DetectorId.SCRIPT_ATTACK,
-                        GuardrailProperties.DetectorId.UNSUPPORTED_MUTATION
+                        GuardrailProperties.DetectorId.SCRIPT_ATTACK
                 )),
                 properties.responses()
         );

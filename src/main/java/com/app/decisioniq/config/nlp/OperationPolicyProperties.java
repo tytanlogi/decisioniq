@@ -20,8 +20,6 @@ public record OperationPolicyProperties(
 ) {
 
     public record Actions(
-            @NotEmpty List<@NotBlank @Size(max = 40) String> read,
-            @NotEmpty List<@NotBlank @Size(max = 40) String> presentation,
             @NotEmpty List<@NotBlank @Size(max = 40) String> construct,
             @NotEmpty List<@NotBlank @Size(max = 40) String> persist,
             @NotEmpty List<@NotBlank @Size(max = 40) String> modify,
@@ -29,8 +27,6 @@ public record OperationPolicyProperties(
             @NotEmpty List<@NotBlank @Size(max = 40) String> external
     ) {
         public Actions {
-            read = copy(read);
-            presentation = copy(presentation);
             construct = copy(construct);
             persist = copy(persist);
             modify = copy(modify);
@@ -41,13 +37,11 @@ public record OperationPolicyProperties(
 
     public record Targets(
             @NotEmpty List<@NotBlank @Size(max = 40) String> presentation,
-            @NotEmpty List<@NotBlank @Size(max = 40) String> persistent,
-            @NotEmpty List<@NotBlank @Size(max = 40) String> domainData
+            @NotEmpty List<@NotBlank @Size(max = 40) String> persistent
     ) {
         public Targets {
             presentation = copy(presentation);
             persistent = copy(persistent);
-            domainData = copy(domainData);
         }
     }
 

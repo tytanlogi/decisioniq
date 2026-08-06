@@ -50,16 +50,21 @@ public class NlpOperationAnalyzer {
                 .filter(dependency -> "root".equals(dependency.relation()))
                 .map(NlpAnalysis.Dependency::dependentIndex)
                 .collect(java.util.stream.Collectors.toSet());
+        Set<Integer> auxiliaryIndexes = dependencies.stream()
+                .filter(dependency -> isAuxiliaryRelation(dependency.relation()))
+                .map(NlpAnalysis.Dependency::dependentIndex)
+                .collect(Collectors.toSet());
         Set<Integer> inferredActionIndexes = new HashSet<>();
         List<NlpAnalysis.Token> actionTokens = new ArrayList<>(tokens.stream()
-                .filter(token -> isVerb(token)
+                .filter(token -> isVerb(token) && !auxiliaryIndexes.contains(token.index())
                         || rootIndexes.contains(token.index()) && isKnownAction(token.lemma()))
                 .toList());
-        if (actionTokens.isEmpty()
-                && !tokens.isEmpty()
-                && "JJ".equals(tokens.getFirst().partOfSpeech())) {
-            actionTokens.add(tokens.getFirst());
-            inferredActionIndexes.add(tokens.getFirst().index());
+        NlpAnalysis.Token leadingToken = firstContentToken(tokens);
+        if (leadingToken != null
+                && isKnownAction(leadingToken.lemma())
+                && actionTokens.stream().noneMatch(token -> token.index() == leadingToken.index())) {
+            actionTokens.add(leadingToken);
+            inferredActionIndexes.add(leadingToken.index());
         }
         List<String> actions = distinct(actionTokens.stream()
                 .map(NlpAnalysis.Token::lemma)
@@ -83,8 +88,9 @@ public class NlpOperationAnalyzer {
                 .distinct()
                 .toList();
 
-        Classification classification = classify(
-                tokens, actionTokens, rootIndexes, inferredActionIndexes, targets
+        NlpOperationFrame.Effect effect = classify(
+                dependencies, actionTokens, rootIndexes, auxiliaryIndexes,
+                inferredActionIndexes, targets
         );
         return new NlpOperationFrame(
                 sentence.index(),
@@ -93,83 +99,108 @@ public class NlpOperationAnalyzer {
                 actions,
                 objects,
                 targets,
-                classification.effect(),
-                classification.certainty()
+                effect
         );
     }
 
-    private Classification classify(
-            List<NlpAnalysis.Token> tokens,
+    private NlpOperationFrame.Effect classify(
+            List<NlpAnalysis.Dependency> dependencies,
             List<NlpAnalysis.Token> actionTokens,
             Set<Integer> rootIndexes,
+            Set<Integer> auxiliaryIndexes,
             Set<Integer> inferredActionIndexes,
             List<String> targets
     ) {
         Set<String> requestedActions = actionTokens.stream()
                 .filter(token -> canRequestOperation(
-                        token, rootIndexes, inferredActionIndexes
+                        token, actionTokens, dependencies, rootIndexes, auxiliaryIndexes,
+                        inferredActionIndexes
                 ))
                 .map(NlpAnalysis.Token::lemma)
                 .map(this::normalize)
                 .collect(Collectors.toSet());
-        boolean question = tokens.stream().anyMatch(token ->
-                token.partOfSpeech() != null && token.partOfSpeech().startsWith("W")
-        );
         boolean persistentTarget = intersects(targets, properties.targets().persistent());
-        boolean presentationTarget = intersects(targets, properties.targets().presentation());
-        boolean domainDataTarget = intersects(targets, properties.targets().domainData());
 
         if (intersects(requestedActions, properties.actions().modify())) {
-            return explicit(NlpOperationFrame.Effect.MODIFY);
+            return NlpOperationFrame.Effect.MODIFY;
         }
         if (intersects(requestedActions, properties.actions().external())) {
-            return explicit(NlpOperationFrame.Effect.EXTERNAL_ACTION);
+            return NlpOperationFrame.Effect.EXTERNAL_ACTION;
         }
         if (intersects(requestedActions, properties.actions().transfer())) {
-            return explicit(NlpOperationFrame.Effect.TRANSFER);
+            return NlpOperationFrame.Effect.TRANSFER;
         }
         if (intersects(requestedActions, properties.actions().persist())) {
-            return explicit(NlpOperationFrame.Effect.PERSIST);
+            return NlpOperationFrame.Effect.PERSIST;
         }
         if (intersects(requestedActions, properties.actions().construct())) {
             if (persistentTarget) {
-                return explicit(NlpOperationFrame.Effect.PERSIST);
+                return NlpOperationFrame.Effect.PERSIST;
             }
-            if (presentationTarget) {
-                return explicit(NlpOperationFrame.Effect.PRESENT);
-            }
-            return unknown();
         }
-        if (intersects(requestedActions, properties.actions().presentation())) {
-            return explicit(NlpOperationFrame.Effect.PRESENT);
-        }
-        if (intersects(requestedActions, properties.actions().read()) || question) {
-            return explicit(NlpOperationFrame.Effect.READ);
-        }
-        if (!requestedActions.isEmpty() && persistentTarget) {
-            return new Classification(
-                    NlpOperationFrame.Effect.PERSIST,
-                    NlpOperationFrame.Certainty.INFERRED
-            );
-        }
-        if (!requestedActions.isEmpty() && domainDataTarget) {
-            return new Classification(
-                    NlpOperationFrame.Effect.UNRESOLVED_ACTION,
-                    NlpOperationFrame.Certainty.INFERRED
-            );
-        }
-        return unknown();
+        return NlpOperationFrame.Effect.SAFE_CANDIDATE;
     }
 
     private boolean canRequestOperation(
             NlpAnalysis.Token token,
+            List<NlpAnalysis.Token> actionTokens,
+            List<NlpAnalysis.Dependency> dependencies,
             Set<Integer> rootIndexes,
+            Set<Integer> auxiliaryIndexes,
             Set<Integer> inferredActionIndexes
     ) {
+        if (inferredActionIndexes.contains(token.index())) {
+            return true;
+        }
+        if (auxiliaryIndexes.contains(token.index())) {
+            return false;
+        }
         return "VB".equals(token.partOfSpeech())
                 || "VBP".equals(token.partOfSpeech())
-                || rootIndexes.contains(token.index()) && !isVerb(token)
-                || inferredActionIndexes.contains(token.index());
+                || isRequestedComplement(token, dependencies)
+                || isGerundAfterImperativeRoot(token, actionTokens, rootIndexes)
+                || rootIndexes.contains(token.index()) && !isVerb(token);
+    }
+
+    private boolean isGerundAfterImperativeRoot(
+            NlpAnalysis.Token token,
+            List<NlpAnalysis.Token> actionTokens,
+            Set<Integer> rootIndexes
+    ) {
+        if (!"VBG".equals(token.partOfSpeech())) {
+            return false;
+        }
+        return actionTokens.stream().anyMatch(candidate ->
+                candidate.index() < token.index()
+                        && rootIndexes.contains(candidate.index())
+                        && "VB".equals(candidate.partOfSpeech())
+        );
+    }
+
+    private boolean isRequestedComplement(
+            NlpAnalysis.Token token,
+            List<NlpAnalysis.Dependency> dependencies
+    ) {
+        return dependencies.stream().anyMatch(dependency ->
+                dependency.dependentIndex() == token.index()
+                        && ("xcomp".equals(dependency.relation())
+                        || "ccomp".equals(dependency.relation()))
+        );
+    }
+
+    private NlpAnalysis.Token firstContentToken(List<NlpAnalysis.Token> tokens) {
+        return tokens.stream()
+                .filter(token -> token.partOfSpeech() == null
+                        || !token.partOfSpeech().matches("[.,:;]+"))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean isAuxiliaryRelation(String relation) {
+        return relation != null
+                && (relation.equals("cop")
+                || relation.equals("aux")
+                || relation.startsWith("aux:"));
     }
 
     private boolean isVerb(NlpAnalysis.Token token) {
@@ -177,9 +208,7 @@ public class NlpOperationAnalyzer {
     }
 
     private boolean isKnownAction(String value) {
-        return contains(properties.actions().read(), normalize(value))
-                || contains(properties.actions().presentation(), normalize(value))
-                || contains(properties.actions().construct(), normalize(value))
+        return contains(properties.actions().construct(), normalize(value))
                 || contains(properties.actions().persist(), normalize(value))
                 || contains(properties.actions().modify(), normalize(value))
                 || contains(properties.actions().transfer(), normalize(value))
@@ -199,8 +228,7 @@ public class NlpOperationAnalyzer {
 
     private boolean isKnownTarget(String value) {
         return contains(properties.targets().presentation(), value)
-                || contains(properties.targets().persistent(), value)
-                || contains(properties.targets().domainData(), value);
+                || contains(properties.targets().persistent(), value);
     }
 
     private boolean intersects(Iterable<String> left, List<String> right) {
@@ -226,19 +254,4 @@ public class NlpOperationAnalyzer {
         return value == null ? "" : value.toLowerCase(Locale.ROOT);
     }
 
-    private Classification explicit(NlpOperationFrame.Effect effect) {
-        return new Classification(effect, NlpOperationFrame.Certainty.EXPLICIT);
-    }
-
-    private Classification unknown() {
-        return new Classification(
-                NlpOperationFrame.Effect.UNKNOWN,
-                NlpOperationFrame.Certainty.UNKNOWN
-        );
-    }
-
-    private record Classification(
-            NlpOperationFrame.Effect effect,
-            NlpOperationFrame.Certainty certainty
-    ) { }
 }

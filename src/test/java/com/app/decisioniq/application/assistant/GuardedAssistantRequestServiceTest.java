@@ -87,7 +87,7 @@ class GuardedAssistantRequestServiceTest {
                 .thenReturn(analysis("show TXN-006451"));
         NlpOperationFrame frame = new NlpOperationFrame(
                 0, 0, "show TXN-006451", List.of("show"), List.of(), List.of(),
-                NlpOperationFrame.Effect.READ, NlpOperationFrame.Certainty.EXPLICIT
+                NlpOperationFrame.Effect.SAFE_CANDIDATE
         );
         CatalogFrameValidation validation = new CatalogFrameValidation(
                 relevanceDecision,

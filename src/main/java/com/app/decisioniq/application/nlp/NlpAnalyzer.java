@@ -11,11 +11,14 @@ import edu.stanford.nlp.semgraph.SemanticGraphEdge;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class NlpAnalyzer {
@@ -142,6 +145,7 @@ public class NlpAnalyzer {
                 cuts.put(conjunction, new ClauseCut(conjunction, conjunction + 1));
             }
         }
+        addSupplementalPhraseCuts(tokens, graph, cuts);
 
         List<ClauseCut> orderedCuts = cuts.values().stream()
                 .sorted(Comparator.comparingInt(ClauseCut::separatorIndex))
@@ -178,6 +182,9 @@ public class NlpAnalyzer {
         if (hasPredicateMarker) {
             return true;
         }
+        if ("UH".equals(partOfSpeech) || hasFollowingParticle(word.index(), tokens)) {
+            return true;
+        }
         if (governor.tag() != null
                 && governor.tag().startsWith("VB")
                 && partOfSpeech != null
@@ -202,6 +209,73 @@ public class NlpAnalyzer {
         return tokens.stream()
                 .filter(token -> token.index() > tokenIndex)
                 .anyMatch(token -> !".".equals(token.tag()));
+    }
+
+    private boolean hasFollowingParticle(int tokenIndex, List<CoreLabel> tokens) {
+        return tokens.stream()
+                .filter(token -> token.index() == tokenIndex + 1)
+                .anyMatch(token -> "RP".equals(token.tag()));
+    }
+
+    private void addSupplementalPhraseCuts(
+            List<CoreLabel> tokens,
+            SemanticGraph graph,
+            Map<Integer, ClauseCut> cuts
+    ) {
+        for (SemanticGraphEdge edge : graph.edgeListSorted()) {
+            String relation = edge.getRelation().getShortName();
+            if (!isSupplementalRelation(relation)) {
+                continue;
+            }
+
+            TokenRange range = dependencySubtreeRange(edge.getDependent().index(), graph);
+            int commaBefore = range.firstIndex() - 1;
+            if (!isComma(tokens, commaBefore)) {
+                continue;
+            }
+            cuts.put(commaBefore, new ClauseCut(commaBefore, commaBefore + 1));
+
+            int commaAfter = range.lastIndex() + 1;
+            if (isComma(tokens, commaAfter)) {
+                cuts.put(commaAfter, new ClauseCut(commaAfter, commaAfter + 1));
+            }
+        }
+    }
+
+    private boolean isSupplementalRelation(String relation) {
+        return "appos".equals(relation)
+                || "vocative".equals(relation)
+                || "discourse".equals(relation)
+                || "parataxis".equals(relation)
+                || "dep".equals(relation);
+    }
+
+    private TokenRange dependencySubtreeRange(int headIndex, SemanticGraph graph) {
+        int first = headIndex;
+        int last = headIndex;
+        ArrayDeque<Integer> pending = new ArrayDeque<>();
+        Set<Integer> visited = new HashSet<>();
+        pending.add(headIndex);
+        while (!pending.isEmpty()) {
+            int current = pending.removeFirst();
+            if (!visited.add(current)) {
+                continue;
+            }
+            first = Math.min(first, current);
+            last = Math.max(last, current);
+            for (SemanticGraphEdge edge : graph.edgeListSorted()) {
+                if (edge.getGovernor().index() == current) {
+                    pending.add(edge.getDependent().index());
+                }
+            }
+        }
+        return new TokenRange(first, last);
+    }
+
+    private boolean isComma(List<CoreLabel> tokens, int tokenIndex) {
+        return tokens.stream()
+                .filter(token -> token.index() == tokenIndex)
+                .anyMatch(token -> ",".equals(token.originalText()));
     }
 
     private int coordinatingTokenBetween(List<CoreLabel> tokens, int left, int right) {
@@ -278,6 +352,8 @@ public class NlpAnalyzer {
     }
 
     private record ClauseCut(int separatorIndex, int nextTokenIndex) { }
+
+    private record TokenRange(int firstIndex, int lastIndex) { }
 
     private record TextSegment(int begin, String text) { }
 }

@@ -61,6 +61,27 @@ class NlpAnalyzerGoldenTest {
                         "Explain TXN-006451 and then delete transaction TXN-006452.",
                         "Explain TXN-006451",
                         "then delete transaction TXN-006452."
+                ),
+                golden(
+                        "Show TXN-006451, idiot.",
+                        "Show TXN-006451",
+                        "idiot."
+                ),
+                golden(
+                        "Count last week's transactions, you useless bot.",
+                        "Count last week's transactions",
+                        "you useless bot."
+                ),
+                golden(
+                        "Explain the decision, damn it, for TXN-006451.",
+                        "Explain the decision",
+                        "damn it",
+                        "for TXN-006451."
+                ),
+                golden(
+                        "Get the location for TXN-006451 and piss off.",
+                        "Get the location for TXN-006451",
+                        "piss off."
                 )
         );
 

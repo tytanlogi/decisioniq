@@ -21,7 +21,6 @@ public record GuardrailProperties(
         String version,
         @NotNull @Valid Limits limits,
         @NotNull @Valid Normalization normalization,
-        @NotNull @Valid Vocabulary vocabulary,
         @NotNull @Valid Patterns patterns,
         @NotNull @Valid Detectors detectors,
         @NotNull @Valid Responses responses
@@ -43,23 +42,6 @@ public record GuardrailProperties(
     ) {
     }
 
-    public record Vocabulary(
-            @NotEmpty @Size(max = 80)
-            List<@NotBlank @Size(max = 40) String> mutationAliases,
-            @NotEmpty @Size(max = 80)
-            List<@NotBlank @Size(max = 60) String> mutationDomainObjects
-    ) {
-
-        public Vocabulary {
-            mutationAliases = immutable(mutationAliases);
-            mutationDomainObjects = immutable(mutationDomainObjects);
-        }
-
-        private static List<String> immutable(List<String> values) {
-            return values == null ? null : List.copyOf(values);
-        }
-    }
-
     public record Detectors(
             @NotEmpty @Size(max = 8)
             List<@NotNull DetectorId> enabled
@@ -72,8 +54,7 @@ public record GuardrailProperties(
 
     public record Patterns(
             @NotBlank @Size(max = 512) String correlationId,
-            @NotNull @Valid DetectorPatterns detectors,
-            @NotNull @Valid MutationPatterns mutation
+            @NotNull @Valid DetectorPatterns detectors
     ) {
     }
 
@@ -90,11 +71,6 @@ public record GuardrailProperties(
         }
     }
 
-    public record MutationPatterns(
-            @NotBlank @Size(max = 1500) String domainObjectTemplate
-    ) {
-    }
-
     public record PatternDefinition(
             @NotBlank @Pattern(regexp = "[a-z][a-z0-9.-]{1,63}") String id,
             @NotBlank @Size(max = 1500) String expression
@@ -104,8 +80,7 @@ public record GuardrailProperties(
     public enum DetectorId {
         RAW_SQL,
         SCRIPT_ATTACK,
-        INSTRUCTION_BYPASS,
-        UNSUPPORTED_MUTATION
+        INSTRUCTION_BYPASS
     }
 
     public record Responses(

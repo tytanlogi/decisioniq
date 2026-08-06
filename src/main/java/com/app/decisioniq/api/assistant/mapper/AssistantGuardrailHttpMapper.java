@@ -3,6 +3,7 @@ package com.app.decisioniq.api.assistant.mapper;
 import com.app.decisioniq.api.assistant.model.AssistantAnswerResponse;
 import com.app.decisioniq.api.error.DecisionIqApiException;
 import com.app.decisioniq.application.assistant.AssistantRequestResult;
+import com.app.decisioniq.application.nlp.OperationPolicyOutcome;
 import com.app.decisioniq.config.guardrail.GuardrailProperties;
 import com.app.decisioniq.config.catalog.CatalogRelevanceProperties;
 import com.app.decisioniq.domain.catalog.CatalogRelevanceDecision;
@@ -29,16 +30,24 @@ public class AssistantGuardrailHttpMapper {
     public AssistantAnswerResponse toResponse(AssistantRequestResult result) {
         GuardrailDecision decision = result.guardrailDecision();
         if (decision.outcome() != GuardrailOutcome.ALLOW_TO_INTERPRET) {
-            HttpStatus status = decision.outcome()
-                    == GuardrailOutcome.BLOCKED_UNSUPPORTED_MUTATION
-                    ? HttpStatus.UNPROCESSABLE_ENTITY
-                    : HttpStatus.BAD_REQUEST;
             GuardrailProperties.ResponseTemplate template = decision.outcome()
                     == GuardrailOutcome.REQUEST_INVALID
                     ? properties.responses().requestInvalid()
                     : properties.responses().blockedUnsupportedContent();
             throw new DecisionIqApiException(
-                    status, template.code(), template.message(), result
+                    HttpStatus.BAD_REQUEST, template.code(), template.message(), result
+            );
+        }
+
+        if (result.operationPolicyOutcome()
+                == OperationPolicyOutcome.BLOCKED_UNSUPPORTED_OPERATION) {
+            GuardrailProperties.ResponseTemplate template =
+                    properties.responses().blockedUnsupportedContent();
+            throw new DecisionIqApiException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    template.code(),
+                    template.message(),
+                    result
             );
         }
 

@@ -93,27 +93,27 @@ class CatalogRelevanceServiceTest {
     }
 
     @Test
-    void meaningfulOutOfScopeUnitIsNotHiddenBySupportedUnit() {
+    void defersMixedSafeUnitsToInterpreterWhenOneUnitIsSupported() {
         NlpOperationFrame valid = frame(
-                "Why was TXN-1 approved?", NlpOperationFrame.Effect.READ
+                "Why was TXN-1 approved?", NlpOperationFrame.Effect.SAFE_CANDIDATE
         );
         NlpOperationFrame unrelated = frame(
-                "Explain photosynthesis", NlpOperationFrame.Effect.READ
+                "Explain photosynthesis", NlpOperationFrame.Effect.SAFE_CANDIDATE
         );
         when(client.search(valid.text(), "corr-8")).thenReturn(result(0.44));
         when(client.search(unrelated.text(), "corr-8")).thenReturn(result(0.05));
 
         assertThat(service.evaluateFrames(List.of(valid, unrelated), "corr-8").outcome())
-                .isEqualTo(CatalogRelevanceOutcome.OUT_OF_SCOPE);
+                .isEqualTo(CatalogRelevanceOutcome.SUPPORTED);
     }
 
     @Test
     void unsupportedUnknownFragmentCanBeIgnoredWhenAnotherUnitIsSupported() {
         NlpOperationFrame noise = frame(
-                "yummy the tummy", NlpOperationFrame.Effect.UNKNOWN
+                "yummy the tummy", NlpOperationFrame.Effect.SAFE_CANDIDATE
         );
         NlpOperationFrame valid = frame(
-                "Why was TXN-1 approved?", NlpOperationFrame.Effect.READ
+                "Why was TXN-1 approved?", NlpOperationFrame.Effect.SAFE_CANDIDATE
         );
         when(client.search(noise.text(), "corr-9")).thenReturn(result(0.05));
         when(client.search(valid.text(), "corr-9")).thenReturn(result(0.44));
@@ -125,10 +125,11 @@ class CatalogRelevanceServiceTest {
     @Test
     void buildsEffectiveQuestionFromSupportedUnitsOnly() {
         NlpOperationFrame valid = frame(
-                "why was transaction tx:123232 approved", NlpOperationFrame.Effect.READ
+                "why was transaction tx:123232 approved",
+                NlpOperationFrame.Effect.SAFE_CANDIDATE
         );
         NlpOperationFrame noise = frame(
-                "if it is then fuck off", NlpOperationFrame.Effect.UNKNOWN
+                "if it is then fuck off", NlpOperationFrame.Effect.SAFE_CANDIDATE
         );
         when(client.search(valid.text(), "corr-10")).thenReturn(result(0.44));
         when(client.search(noise.text(), "corr-10")).thenReturn(result(0.05));
@@ -145,10 +146,34 @@ class CatalogRelevanceServiceTest {
                 .containsExactly(true, false);
     }
 
+    @Test
+    void rebuildsQuestionFromSupportedFragmentsAroundDetachedNoise() {
+        NlpOperationFrame request = frame(
+                "Explain the decision", NlpOperationFrame.Effect.SAFE_CANDIDATE
+        );
+        NlpOperationFrame noise = frame(
+                "damn it", NlpOperationFrame.Effect.SAFE_CANDIDATE
+        );
+        NlpOperationFrame identifier = frame(
+                "for TXN-006451", NlpOperationFrame.Effect.SAFE_CANDIDATE
+        );
+        when(client.search(request.text(), "corr-11")).thenReturn(result(0.44));
+        when(client.search(noise.text(), "corr-11")).thenReturn(result(0.05));
+        when(client.search(identifier.text(), "corr-11")).thenReturn(result(0.41));
+
+        CatalogFrameValidation validation = service.validateFrames(
+                List.of(request, noise, identifier), "corr-11"
+        );
+
+        assertThat(validation.decision().outcome())
+                .isEqualTo(CatalogRelevanceOutcome.SUPPORTED);
+        assertThat(validation.effectiveQuestion())
+                .isEqualTo("Explain the decision for TXN-006451");
+    }
+
     private NlpOperationFrame frame(String text, NlpOperationFrame.Effect effect) {
         return new NlpOperationFrame(
-                0, 0, text, List.of(), List.of(), List.of(), effect,
-                NlpOperationFrame.Certainty.EXPLICIT
+                0, 0, text, List.of(), List.of(), List.of(), effect
         );
     }
 

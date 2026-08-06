@@ -2,6 +2,7 @@ package com.app.decisioniq.api.error;
 
 import com.app.decisioniq.api.filter.RequestIdentityFilter;
 import com.app.decisioniq.application.assistant.AssistantRequestResult;
+import com.app.decisioniq.application.nlp.OperationPolicyOutcome;
 import com.app.decisioniq.application.catalog.CatalogSearchUnavailableException;
 import com.app.decisioniq.application.guardrail.RequestBoundaryValidationException;
 import com.app.decisioniq.config.catalog.CatalogRelevanceProperties;
@@ -54,7 +55,10 @@ public class GlobalApiExceptionHandler {
                 ? null
                 : exception.guardrailDecision().reasonCode();
         CatalogRelevanceDecision relevance = exception.catalogRelevanceDecision();
-        AssistantRequestResult result = exception.requestResult();
+        AssistantRequestResult requestResult = exception.requestResult();
+        OperationPolicyOutcome operationPolicyOutcome = requestResult == null
+                ? OperationPolicyOutcome.NOT_EVALUATED
+                : requestResult.operationPolicyOutcome();
         return error(
                 exception.status(),
                 exception.code(),
@@ -62,9 +66,9 @@ public class GlobalApiExceptionHandler {
                 request,
                 outcome,
                 reason,
+                operationPolicyOutcome,
                 relevance == null ? null : relevance.outcome(),
                 relevance == null ? List.of() : relevance.matches(),
-                result,
                 List.of()
         );
     }
@@ -83,9 +87,9 @@ public class GlobalApiExceptionHandler {
                 request,
                 GuardrailOutcome.ALLOW_TO_INTERPRET,
                 GuardrailReasonCode.READY_FOR_INTERPRETATION,
+                OperationPolicyOutcome.NOT_EVALUATED,
                 null,
                 List.of(),
-                null,
                 List.of()
         );
     }
@@ -132,9 +136,9 @@ public class GlobalApiExceptionHandler {
                 request,
                 GuardrailOutcome.REQUEST_INVALID,
                 GuardrailReasonCode.MALFORMED_INPUT,
+                OperationPolicyOutcome.NOT_EVALUATED,
                 null,
                 List.of(),
-                null,
                 List.of()
         );
     }
@@ -152,9 +156,9 @@ public class GlobalApiExceptionHandler {
                 request,
                 GuardrailOutcome.REQUEST_INVALID,
                 GuardrailReasonCode.MALFORMED_INPUT,
+                OperationPolicyOutcome.NOT_EVALUATED,
                 null,
                 List.of(),
-                null,
                 List.of()
         );
     }
@@ -178,9 +182,9 @@ public class GlobalApiExceptionHandler {
                 request,
                 null,
                 null,
+                OperationPolicyOutcome.NOT_EVALUATED,
                 null,
                 List.of(),
-                null,
                 List.of()
         );
     }
@@ -197,9 +201,9 @@ public class GlobalApiExceptionHandler {
                 request,
                 GuardrailOutcome.REQUEST_INVALID,
                 GuardrailReasonCode.MALFORMED_INPUT,
+                OperationPolicyOutcome.NOT_EVALUATED,
                 null,
                 List.of(),
-                null,
                 violations
         );
     }
@@ -211,9 +215,9 @@ public class GlobalApiExceptionHandler {
             HttpServletRequest request,
             GuardrailOutcome outcome,
             GuardrailReasonCode reason,
+            OperationPolicyOutcome operationPolicyOutcome,
             CatalogRelevanceOutcome relevanceOutcome,
             List<Match> catalogMatches,
-            AssistantRequestResult result,
             List<ApiFieldViolation> violations
     ) {
         return ResponseEntity.status(status).body(new ApiErrorResponse(
@@ -225,12 +229,9 @@ public class GlobalApiExceptionHandler {
                 requestId(request),
                 outcome,
                 reason,
+                operationPolicyOutcome,
                 relevanceOutcome,
                 catalogMatches,
-                result == null ? null : result.nlpAnalysis(),
-                result == null ? List.of() : result.operationFrames(),
-                result == null ? null : result.catalogValidation(),
-                result == null ? null : result.effectiveQuestion(),
                 violations
         ));
     }
