@@ -4,6 +4,7 @@ import com.app.decisioniq.application.catalog.CatalogInterpretationInputFactory;
 import com.app.decisioniq.application.interpretation.RequestInterpretationService;
 import com.app.decisioniq.application.nlp.NlpAnalysis;
 import com.app.decisioniq.application.nlp.NlpAnalyzer;
+import com.app.decisioniq.application.nlp.NlpClauseRoleAnalyzer;
 import com.app.decisioniq.application.nlp.NlpOperationAnalyzer;
 import com.app.decisioniq.application.nlp.NlpOperationFrame;
 import com.app.decisioniq.application.nlp.OperationPolicyOutcome;
@@ -29,6 +30,9 @@ class AssistantInterpretationWorkflowTest {
     private NlpOperationAnalyzer operationAnalyzer;
 
     @Mock
+    private NlpClauseRoleAnalyzer clauseRoleAnalyzer;
+
+    @Mock
     private CatalogInterpretationInputFactory inputFactory;
 
     @Mock
@@ -41,6 +45,7 @@ class AssistantInterpretationWorkflowTest {
         NlpOperationFrame frame = frame(command.question(), NlpOperationFrame.Effect.MODIFY);
         when(nlpAnalyzer.analyze(command.question())).thenReturn(analysis);
         when(operationAnalyzer.analyze(analysis)).thenReturn(List.of(frame));
+        when(clauseRoleAnalyzer.classify(analysis, List.of(frame))).thenReturn(List.of(frame));
 
         AssistantInterpretationWorkflow workflow = workflow();
         AssistantInterpretationResult result = workflow.interpret(command, command.question());
@@ -58,6 +63,7 @@ class AssistantInterpretationWorkflowTest {
         InterpretationInput input = new InterpretationInput("1.1", command.question(), List.of(), List.of());
         when(nlpAnalyzer.analyze(command.question())).thenReturn(analysis);
         when(operationAnalyzer.analyze(analysis)).thenReturn(List.of(frame));
+        when(clauseRoleAnalyzer.classify(analysis, List.of(frame))).thenReturn(List.of(frame));
         when(inputFactory.create(command.question(), List.of(frame), command.correlationId()))
                 .thenReturn(input);
         when(interpretationService.interpret(input, command.correlationId(), command.requestId()))
@@ -74,6 +80,7 @@ class AssistantInterpretationWorkflowTest {
         return new AssistantInterpretationWorkflow(
                 nlpAnalyzer,
                 operationAnalyzer,
+                clauseRoleAnalyzer,
                 inputFactory,
                 interpretationService
         );

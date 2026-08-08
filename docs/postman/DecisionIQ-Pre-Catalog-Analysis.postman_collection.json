@@ -1,0 +1,73 @@
+{
+  "info": {
+    "name": "DecisionIQ Pre-Catalog Analysis",
+    "description": "Non-production diagnostic calls for the deterministic path before remote catalog/Milvus retrieval.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ],
+  "item": [
+    {
+      "name": "Ready - context plus model-score lookup",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Correlation-Id", "value": "postman-context-001" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tenantId\": \"tenant-demo\",\n  \"userId\": \"user-demo\",\n  \"designation\": \"analyst\",\n  \"conversationId\": \"postman-context-001\",\n  \"question\": \"Transaction TXN-12345 was approved.\\nWhat was the model score?\"\n}"
+        },
+        "url": "{{baseUrl}}/api/admin/pre-catalog-analysis"
+      }
+    },
+    {
+      "name": "Blocked - requested external action",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tenantId\": \"tenant-demo\",\n  \"userId\": \"user-demo\",\n  \"conversationId\": \"postman-block-001\",\n  \"question\": \"Transaction TXN-12345 was approved.\\nPlease email this report.\"\n}"
+        },
+        "url": "{{baseUrl}}/api/admin/pre-catalog-analysis"
+      }
+    },
+    {
+      "name": "Ready - comparison grouping",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Correlation-Id", "value": "postman-comparison-001" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tenantId\": \"tenant-demo\",\n  \"userId\": \"user-demo\",\n  \"designation\": \"analyst\",\n  \"conversationId\": \"postman-comparison-001\",\n  \"question\": \"Why was TX-12345 approved and why was TX-42342 not approved even though model score is same?\"\n}"
+        },
+        "url": "{{baseUrl}}/api/admin/pre-catalog-analysis"
+      }
+    },
+    {
+      "name": "Blocked - raw SQL",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tenantId\": \"tenant-demo\",\n  \"userId\": \"user-demo\",\n  \"conversationId\": \"postman-attack-001\",\n  \"question\": \"Show transaction TXN-12345. select *from transaction\"\n}"
+        },
+        "url": "{{baseUrl}}/api/admin/pre-catalog-analysis"
+      }
+    }
+  ]
+}

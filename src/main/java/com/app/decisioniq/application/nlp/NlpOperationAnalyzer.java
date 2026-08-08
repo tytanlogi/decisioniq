@@ -157,9 +157,20 @@ public class NlpOperationAnalyzer {
         }
         return "VB".equals(token.partOfSpeech())
                 || "VBP".equals(token.partOfSpeech())
-                || isRequestedComplement(token, dependencies)
+                // A past participle in a question ("tell me why it was approved") can be
+                // a complement of the read verb, but it is evidence being asked about—not a
+                // requested write. Complements remain actionable only in command-capable forms.
+                || isCommandCapableComplement(token, dependencies)
                 || isGerundAfterImperativeRoot(token, actionTokens, rootIndexes)
                 || rootIndexes.contains(token.index()) && !isVerb(token);
+    }
+
+    private boolean isCommandCapableComplement(
+            NlpAnalysis.Token token,
+            List<NlpAnalysis.Dependency> dependencies
+    ) {
+        return ("VB".equals(token.partOfSpeech()) || "VBP".equals(token.partOfSpeech()) || "VBG".equals(token.partOfSpeech()))
+                && isRequestedComplement(token, dependencies);
     }
 
     private boolean isGerundAfterImperativeRoot(

@@ -22,6 +22,7 @@ class NlpOperationAnalyzerTest {
     @ParameterizedTest
     @CsvSource(value = {
             "Why was TXN-006451 approved?|SAFE_CANDIDATE|false",
+            "Can you tell me why TX-12345 was approved even though model score risk is too high?|SAFE_CANDIDATE|false",
             "Approve transaction TXN-006451|MODIFY|true",
             "Create a table showing all transactions|SAFE_CANDIDATE|false",
             "Create a table in the database|PERSIST|true",

@@ -20,6 +20,7 @@ public class CatalogCandidateRetriever {
             String correlationId
     ) {
         return units.stream()
+                .filter(NlpOperationFrame::executable)
                 .map(unit -> new UnitCatalogCandidates(
                         unit,
                         catalogClient.search(unit.text(), correlationId)

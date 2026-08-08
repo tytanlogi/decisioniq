@@ -1,6 +1,8 @@
 package com.app.decisioniq.application.catalog;
 
 import com.app.decisioniq.application.nlp.NlpOperationFrame;
+import com.app.decisioniq.application.nlp.NlpClauseRole;
+import com.app.decisioniq.application.nlp.NlpContextCandidate;
 import com.app.decisioniq.domain.catalog.CatalogCandidate;
 import com.app.decisioniq.infrastructure.catalog.CatalogClient;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,29 @@ class CatalogCandidateRetrieverTest {
         assertThat(result.getLast().candidates()).containsExactly(low);
         verify(client).search(first.text(), "corr-1");
         verify(client).search(second.text(), "corr-1");
+    }
+
+    @Test
+    void skipsContextStatementsAndSearchesOnlyExecutableUnits() {
+        NlpOperationFrame context = new NlpOperationFrame(
+                0, 0, "TXN-1 was approved.", List.of(), List.of(), List.of(),
+                NlpOperationFrame.Effect.SAFE_CANDIDATE,
+                NlpClauseRole.CONTEXT_STATEMENT,
+                new NlpContextCandidate("TXN-1", "APPROVED"), "TXN-1"
+        );
+        NlpOperationFrame lookup = new NlpOperationFrame(
+                0, 1, "What was the model score?", List.of(), List.of(), List.of(),
+                NlpOperationFrame.Effect.SAFE_CANDIDATE,
+                NlpClauseRole.EXECUTABLE_REQUEST, null, "TXN-1"
+        );
+        CatalogCandidate candidate = new CatalogCandidate("MODEL_EVIDENCE", 2, 0.48);
+        when(client.search(lookup.text(), "corr-1")).thenReturn(List.of(candidate));
+
+        List<UnitCatalogCandidates> result = retriever.retrieve(List.of(context, lookup), "corr-1");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().unit()).isSameAs(lookup);
+        verify(client).search(lookup.text(), "corr-1");
     }
 
     private NlpOperationFrame unit(int clauseIndex, String text) {

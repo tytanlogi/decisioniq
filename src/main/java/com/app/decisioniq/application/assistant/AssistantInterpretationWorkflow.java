@@ -5,6 +5,7 @@ import com.app.decisioniq.application.interpretation.QueryInterpretation;
 import com.app.decisioniq.application.interpretation.RequestInterpretationService;
 import com.app.decisioniq.application.nlp.NlpAnalysis;
 import com.app.decisioniq.application.nlp.NlpAnalyzer;
+import com.app.decisioniq.application.nlp.NlpClauseRoleAnalyzer;
 import com.app.decisioniq.application.nlp.NlpOperationAnalyzer;
 import com.app.decisioniq.application.nlp.NlpOperationFrame;
 import org.slf4j.Logger;
@@ -20,6 +21,7 @@ public class AssistantInterpretationWorkflow implements AssistantInterpretationS
 
     private final NlpAnalyzer nlpAnalyzer;
     private final NlpOperationAnalyzer operationAnalyzer;
+    private final NlpClauseRoleAnalyzer clauseRoleAnalyzer;
     private final CatalogInterpretationInputFactory inputFactory;
     private final RequestInterpretationService interpretationService;
 
@@ -29,11 +31,13 @@ public class AssistantInterpretationWorkflow implements AssistantInterpretationS
     public AssistantInterpretationWorkflow(
             NlpAnalyzer nlpAnalyzer,
             NlpOperationAnalyzer operationAnalyzer,
+            NlpClauseRoleAnalyzer clauseRoleAnalyzer,
             CatalogInterpretationInputFactory inputFactory,
             RequestInterpretationService interpretationService
     ) {
         this.nlpAnalyzer = nlpAnalyzer;
         this.operationAnalyzer = operationAnalyzer;
+        this.clauseRoleAnalyzer = clauseRoleAnalyzer;
         this.inputFactory = inputFactory;
         this.interpretationService = interpretationService;
     }
@@ -83,15 +87,19 @@ public class AssistantInterpretationWorkflow implements AssistantInterpretationS
         NlpAnalysis analysis = nlpAnalyzer.analyze(normalizedQuestion);
 
         // Convert the linguistic structure into operation-aware request units.
-        List<NlpOperationFrame> frames = operationAnalyzer.analyze(analysis);
+        List<NlpOperationFrame> frames = clauseRoleAnalyzer.classify(
+                analysis, operationAnalyzer.analyze(analysis)
+        );
 
         // Audit only structural outcomes; raw question content is intentionally excluded.
         log.info(
-                "nlp_decomposition correlationId={} requestId={} unitCount={} effects={}",
+                "nlp_decomposition correlationId={} requestId={} unitCount={} executableUnitCount={} effects={} roles={}",
                 command.correlationId(),
                 command.requestId(),
                 frames.size(),
-                frames.stream().map(NlpOperationFrame::effect).toList()
+                frames.stream().filter(NlpOperationFrame::executable).count(),
+                frames.stream().map(NlpOperationFrame::effect).toList(),
+                frames.stream().map(NlpOperationFrame::role).toList()
         );
         return frames;
     }

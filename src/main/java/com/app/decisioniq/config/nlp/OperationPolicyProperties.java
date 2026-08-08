@@ -16,7 +16,8 @@ import java.util.List;
 public record OperationPolicyProperties(
         @NotBlank @Pattern(regexp = "[A-Za-z0-9._-]{1,32}") String version,
         @NotNull @Valid Actions actions,
-        @NotNull @Valid Targets targets
+        @NotNull @Valid Targets targets,
+        @NotNull @Valid Routing routing
 ) {
 
     public record Actions(
@@ -42,6 +43,16 @@ public record OperationPolicyProperties(
         public Targets {
             presentation = copy(presentation);
             persistent = copy(persistent);
+        }
+    }
+
+    public record Routing(
+            @NotEmpty List<@NotBlank @Size(max = 40) String> readActions,
+            @NotEmpty List<@NotBlank @Size(max = 160) String> ignoredHarmlessPhrases
+    ) {
+        public Routing {
+            readActions = copy(readActions);
+            ignoredHarmlessPhrases = copy(ignoredHarmlessPhrases);
         }
     }
 

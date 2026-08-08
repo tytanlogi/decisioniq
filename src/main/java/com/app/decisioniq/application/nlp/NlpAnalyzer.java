@@ -8,6 +8,7 @@ import edu.stanford.nlp.pipeline.CoreSentence;
 import edu.stanford.nlp.pipeline.StanfordCoreNLP;
 import edu.stanford.nlp.semgraph.SemanticGraph;
 import edu.stanford.nlp.semgraph.SemanticGraphEdge;
+import com.app.decisioniq.config.nlp.OperationPolicyProperties;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
@@ -19,14 +20,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Locale;
 
 @Service
 public class NlpAnalyzer {
 
     private final StanfordCoreNLP pipeline;
+    private final OperationPolicyProperties operationPolicy;
 
-    public NlpAnalyzer(@Lazy StanfordCoreNLP pipeline) {
+    public NlpAnalyzer(@Lazy StanfordCoreNLP pipeline, OperationPolicyProperties operationPolicy) {
         this.pipeline = pipeline;
+        this.operationPolicy = operationPolicy;
     }
 
     public NlpAnalysis analyze(String text) {
@@ -146,6 +150,7 @@ public class NlpAnalyzer {
             }
         }
         addSupplementalPhraseCuts(tokens, graph, cuts);
+        addConfiguredReadActionCuts(tokens, cuts);
 
         List<ClauseCut> orderedCuts = cuts.values().stream()
                 .sorted(Comparator.comparingInt(ClauseCut::separatorIndex))
@@ -164,6 +169,33 @@ public class NlpAnalyzer {
                 first, tokens.getLast().index()
         );
         return List.copyOf(clauses);
+    }
+
+    /**
+     * Stanford dependencies are the primary signal. This bounded fallback handles human input such
+     * as "explain X, show Y, and list Z" when a coordinate verb is tagged as a noun.
+     */
+    private void addConfiguredReadActionCuts(List<CoreLabel> tokens, Map<Integer, ClauseCut> cuts) {
+        Set<String> readActions = operationPolicy.routing().readActions().stream()
+                .map(value -> value.toLowerCase(Locale.ROOT))
+                .collect(java.util.stream.Collectors.toSet());
+        for (CoreLabel token : tokens) {
+            if (!",".equals(token.originalText()) && !"CC".equals(token.tag())) {
+                continue;
+            }
+            CoreLabel next = nextContentToken(tokens, token.index());
+            if (next != null && readActions.contains(next.lemma().toLowerCase(Locale.ROOT))) {
+                cuts.put(token.index(), new ClauseCut(token.index(), next.index()));
+            }
+        }
+    }
+
+    private CoreLabel nextContentToken(List<CoreLabel> tokens, int afterIndex) {
+        return tokens.stream()
+                .filter(token -> token.index() > afterIndex)
+                .filter(token -> !",".equals(token.originalText()) && !"CC".equals(token.tag()))
+                .findFirst()
+                .orElse(null);
     }
 
     private boolean startsIndependentClause(

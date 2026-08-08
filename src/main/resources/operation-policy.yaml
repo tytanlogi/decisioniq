@@ -74,3 +74,26 @@ decisioniq:
         - store
         - system
         - topic
+    routing:
+      read-actions:
+        - show
+        - give
+        - tell
+        - get
+        - list
+        - count
+        - find
+        - display
+        - explain
+        - compare
+        - summarize
+        - describe
+        - provide
+        - retrieve
+        - inspect
+      ignored-harmless-phrases:
+        - i am really confused about this one
+        - i am confused about this
+        - this is confusing
+        - i do not understand this
+        - i don't understand this
