@@ -8,10 +8,16 @@ public class GuardrailTextNormalizer {
 
     private final GuardrailProperties properties;
 
+    /**
+     * Creates a normalizer backed by the versioned guardrail normalization policy.
+     */
     public GuardrailTextNormalizer(GuardrailProperties properties) {
         this.properties = properties;
     }
 
+    /**
+     * Removes harmless formatting variance while preserving identifiers, values, and words.
+     */
     public String normalizeQuestion(String question) {
         if (question == null) {
             return "";
@@ -38,6 +44,9 @@ public class GuardrailTextNormalizer {
         );
     }
 
+    /**
+     * Replaces each consecutive whitespace run with one ordinary space.
+     */
     private String collapseWhitespace(String value) {
         StringBuilder normalized = new StringBuilder(value.length());
         boolean previousWhitespace = false;
@@ -56,6 +65,9 @@ public class GuardrailTextNormalizer {
         return normalized.toString();
     }
 
+    /**
+     * Limits repeated punctuation without changing any other characters in the question.
+     */
     private String collapseRepeatedCharacter(String value, char target, int limit) {
         StringBuilder normalized = new StringBuilder(value.length());
         int runLength = 0;

@@ -4,8 +4,9 @@ spring:
   config:
     import:
       - classpath:guardrail.yaml
-      - classpath:catalog-relevance.yaml
+      - classpath:catalog-client.yaml
       - classpath:operation-policy.yaml
+      - classpath:llm.yaml
 decisioniq:
   logging:
     file: ${DECISIONIQ_LOG_FILE:logs/decisioniq-agent.log}

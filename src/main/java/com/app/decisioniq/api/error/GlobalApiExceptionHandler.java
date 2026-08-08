@@ -5,11 +5,9 @@ import com.app.decisioniq.application.assistant.AssistantRequestResult;
 import com.app.decisioniq.application.nlp.OperationPolicyOutcome;
 import com.app.decisioniq.application.catalog.CatalogSearchUnavailableException;
 import com.app.decisioniq.application.guardrail.RequestBoundaryValidationException;
-import com.app.decisioniq.config.catalog.CatalogRelevanceProperties;
+import com.app.decisioniq.application.interpretation.InterpretationUnavailableException;
+import com.app.decisioniq.application.interpretation.InvalidInterpretationException;
 import com.app.decisioniq.config.guardrail.GuardrailProperties;
-import com.app.decisioniq.domain.catalog.CatalogRelevanceDecision;
-import com.app.decisioniq.domain.catalog.CatalogRelevanceDecision.Match;
-import com.app.decisioniq.domain.catalog.CatalogRelevanceOutcome;
 import com.app.decisioniq.domain.guardrail.GuardrailOutcome;
 import com.app.decisioniq.domain.guardrail.GuardrailReasonCode;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,16 +29,20 @@ import java.util.List;
 public class GlobalApiExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalApiExceptionHandler.class);
+    private static final String CATALOG_UNAVAILABLE_CODE = "CATALOG_SERVICE_UNAVAILABLE";
+    private static final String CATALOG_UNAVAILABLE_MESSAGE =
+            "DecisionIQ cannot retrieve governed catalog candidates because the catalog service is unavailable.";
+    private static final String INTERPRETATION_UNAVAILABLE_CODE = "INTERPRETATION_UNAVAILABLE";
+    private static final String INTERPRETATION_UNAVAILABLE_MESSAGE =
+            "DecisionIQ could not interpret the request at this time.";
+    private static final String INTERPRETATION_INVALID_CODE = "INTERPRETATION_INVALID";
+    private static final String INTERPRETATION_INVALID_MESSAGE =
+            "DecisionIQ rejected an invalid model interpretation.";
 
     private final GuardrailProperties properties;
-    private final CatalogRelevanceProperties relevanceProperties;
 
-    public GlobalApiExceptionHandler(
-            GuardrailProperties properties,
-            CatalogRelevanceProperties relevanceProperties
-    ) {
+    public GlobalApiExceptionHandler(GuardrailProperties properties) {
         this.properties = properties;
-        this.relevanceProperties = relevanceProperties;
     }
 
     @ExceptionHandler(DecisionIqApiException.class)
@@ -54,11 +56,13 @@ public class GlobalApiExceptionHandler {
         GuardrailReasonCode reason = exception.guardrailDecision() == null
                 ? null
                 : exception.guardrailDecision().reasonCode();
-        CatalogRelevanceDecision relevance = exception.catalogRelevanceDecision();
         AssistantRequestResult requestResult = exception.requestResult();
         OperationPolicyOutcome operationPolicyOutcome = requestResult == null
                 ? OperationPolicyOutcome.NOT_EVALUATED
                 : requestResult.operationPolicyOutcome();
+        var interpretationInput = requestResult == null
+                ? null
+                : requestResult.interpretationInput();
         return error(
                 exception.status(),
                 exception.code(),
@@ -67,8 +71,7 @@ public class GlobalApiExceptionHandler {
                 outcome,
                 reason,
                 operationPolicyOutcome,
-                relevance == null ? null : relevance.outcome(),
-                relevance == null ? List.of() : relevance.matches(),
+                interpretationInput,
                 List.of()
         );
     }
@@ -78,18 +81,15 @@ public class GlobalApiExceptionHandler {
             CatalogSearchUnavailableException exception,
             HttpServletRequest request
     ) {
-        CatalogRelevanceProperties.ResponseTemplate template =
-                relevanceProperties.responses().unavailable();
         return error(
                 HttpStatus.SERVICE_UNAVAILABLE,
-                template.code(),
-                template.message(),
+                CATALOG_UNAVAILABLE_CODE,
+                CATALOG_UNAVAILABLE_MESSAGE,
                 request,
                 GuardrailOutcome.ALLOW_TO_INTERPRET,
                 GuardrailReasonCode.READY_FOR_INTERPRETATION,
                 OperationPolicyOutcome.NOT_EVALUATED,
                 null,
-                List.of(),
                 List.of()
         );
     }
@@ -104,6 +104,42 @@ public class GlobalApiExceptionHandler {
                 .sorted(Comparator.comparing(ApiFieldViolation::field))
                 .toList();
         return invalidRequest(request, violations);
+    }
+
+    @ExceptionHandler(InterpretationUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleInterpretationUnavailable(
+            InterpretationUnavailableException exception,
+            HttpServletRequest request
+    ) {
+        return error(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                INTERPRETATION_UNAVAILABLE_CODE,
+                INTERPRETATION_UNAVAILABLE_MESSAGE,
+                request,
+                GuardrailOutcome.ALLOW_TO_INTERPRET,
+                GuardrailReasonCode.READY_FOR_INTERPRETATION,
+                OperationPolicyOutcome.ALLOWED,
+                null,
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(InvalidInterpretationException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidInterpretation(
+            InvalidInterpretationException exception,
+            HttpServletRequest request
+    ) {
+        return error(
+                HttpStatus.BAD_GATEWAY,
+                INTERPRETATION_INVALID_CODE,
+                INTERPRETATION_INVALID_MESSAGE,
+                request,
+                GuardrailOutcome.ALLOW_TO_INTERPRET,
+                GuardrailReasonCode.READY_FOR_INTERPRETATION,
+                OperationPolicyOutcome.ALLOWED,
+                null,
+                List.of()
+        );
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -138,7 +174,6 @@ public class GlobalApiExceptionHandler {
                 GuardrailReasonCode.MALFORMED_INPUT,
                 OperationPolicyOutcome.NOT_EVALUATED,
                 null,
-                List.of(),
                 List.of()
         );
     }
@@ -158,7 +193,6 @@ public class GlobalApiExceptionHandler {
                 GuardrailReasonCode.MALFORMED_INPUT,
                 OperationPolicyOutcome.NOT_EVALUATED,
                 null,
-                List.of(),
                 List.of()
         );
     }
@@ -184,7 +218,6 @@ public class GlobalApiExceptionHandler {
                 null,
                 OperationPolicyOutcome.NOT_EVALUATED,
                 null,
-                List.of(),
                 List.of()
         );
     }
@@ -203,7 +236,6 @@ public class GlobalApiExceptionHandler {
                 GuardrailReasonCode.MALFORMED_INPUT,
                 OperationPolicyOutcome.NOT_EVALUATED,
                 null,
-                List.of(),
                 violations
         );
     }
@@ -216,8 +248,7 @@ public class GlobalApiExceptionHandler {
             GuardrailOutcome outcome,
             GuardrailReasonCode reason,
             OperationPolicyOutcome operationPolicyOutcome,
-            CatalogRelevanceOutcome relevanceOutcome,
-            List<Match> catalogMatches,
+            com.app.decisioniq.application.assistant.InterpretationInput interpretationInput,
             List<ApiFieldViolation> violations
     ) {
         return ResponseEntity.status(status).body(new ApiErrorResponse(
@@ -230,8 +261,7 @@ public class GlobalApiExceptionHandler {
                 outcome,
                 reason,
                 operationPolicyOutcome,
-                relevanceOutcome,
-                catalogMatches,
+                interpretationInput,
                 violations
         ));
     }

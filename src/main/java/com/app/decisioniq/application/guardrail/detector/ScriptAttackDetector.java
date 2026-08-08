@@ -15,17 +15,26 @@ public class ScriptAttackDetector implements GuardrailDetector {
 
     private final List<Pattern> signatures;
 
+    /**
+     * Loads the precompiled executable-content signatures from the central registry.
+     */
     public ScriptAttackDetector(GuardrailPatternRegistry patternRegistry) {
         this.signatures = patternRegistry.detectorPatterns(
                 GuardrailProperties.DetectorId.SCRIPT_ATTACK
         );
     }
 
+    /**
+     * Returns the configuration identifier for script-attack detection.
+     */
     @Override
     public GuardrailProperties.DetectorId detectorId() {
         return GuardrailProperties.DetectorId.SCRIPT_ATTACK;
     }
 
+    /**
+     * Blocks text containing configured script or executable-content signatures.
+     */
     @Override
     public Optional<GuardrailDetection> detect(String text) {
         return signatures.stream().anyMatch(pattern -> pattern.matcher(text).find())

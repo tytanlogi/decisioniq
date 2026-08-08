@@ -18,10 +18,16 @@ public class GuardrailConfigurationValidator {
 
     private final GuardrailProperties properties;
 
+    /**
+     * Creates a startup validator for the bound guardrail policy.
+     */
     public GuardrailConfigurationValidator(GuardrailProperties properties) {
         this.properties = properties;
     }
 
+    /**
+     * Fails application startup when detector IDs, response codes, or required policies are invalid.
+     */
     @PostConstruct
     public void validateConfiguration() {
         requireUniquePatternIds("raw SQL patterns", properties.patterns().detectors().rawSql());
@@ -47,12 +53,18 @@ public class GuardrailConfigurationValidator {
         }
     }
 
+    /**
+     * Rejects duplicate values in a named configuration collection.
+     */
     private <T> void requireUnique(String name, List<T> values) {
         if (new HashSet<>(values).size() != values.size()) {
             throw new IllegalStateException("Guardrail " + name + " must not contain duplicates");
         }
     }
 
+    /**
+     * Rejects duplicate pattern IDs so diagnostics and policy changes remain unambiguous.
+     */
     private void requireUniquePatternIds(
             String name,
             List<GuardrailProperties.PatternDefinition> definitions

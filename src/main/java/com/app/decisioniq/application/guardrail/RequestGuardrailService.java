@@ -1,106 +1,84 @@
 package com.app.decisioniq.application.guardrail;
 
-import com.app.decisioniq.application.guardrail.detector.GuardrailDetection;
-import com.app.decisioniq.application.guardrail.detector.GuardrailDetector;
-import com.app.decisioniq.config.guardrail.GuardrailProperties;
 import com.app.decisioniq.domain.guardrail.GuardrailDecision;
 import com.app.decisioniq.domain.guardrail.GuardrailOutcome;
 import com.app.decisioniq.domain.guardrail.GuardrailReasonCode;
 import org.springframework.stereotype.Service;
-
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 @Service
 public class RequestGuardrailService {
 
     private final GuardrailTextNormalizer normalizer;
     private final GuardrailInputValidator inputValidator;
+    private final GuardrailDetectionService detectionService;
     private final GuardrailAuditLogger auditLogger;
-    private final GuardrailProperties properties;
-    private final Map<GuardrailProperties.DetectorId, GuardrailDetector> detectors;
 
+    /**
+     * Creates the guardrail coordinator from focused validation, detection, audit, and normalization services.
+     */
     public RequestGuardrailService(
             GuardrailTextNormalizer normalizer,
             GuardrailInputValidator inputValidator,
-            GuardrailAuditLogger auditLogger,
-            GuardrailProperties properties,
-            List<GuardrailDetector> detectorList
+            GuardrailDetectionService detectionService,
+            GuardrailAuditLogger auditLogger
     ) {
         this.normalizer = normalizer;
         this.inputValidator = inputValidator;
+        this.detectionService = detectionService;
         this.auditLogger = auditLogger;
-        this.properties = properties;
-        this.detectors = indexDetectors(detectorList);
     }
 
+    /**
+     * Normalizes and validates a question, applies all configured security detectors,
+     * and records the resulting guardrail decision without logging the raw question.
+     */
     public GuardrailDecision evaluate(String question, String correlationId) {
+        // Remove harmless formatting variance without changing identifiers or semantic values.
         String normalized = normalizer.normalizeQuestion(question);
-        String fingerprint = auditLogger.fingerprint(question);
+
+        // Retain only input size as additional safe audit context.
         int inputLength = question == null ? 0 : question.length();
 
-        if (inputValidator.isInvalid(question, normalized)) {
-            return auditLogger.record(
-                    invalidDecision(normalized, fingerprint),
-                    correlationId,
-                    inputLength
-            );
+        // Validate the normalized input and apply configured security detectors.
+        GuardrailDecision decision = createDecision(question, normalized);
+
+        // Persist the final policy outcome after all guardrail decisions are complete.
+        auditLogger.record(decision, correlationId, inputLength);
+        return decision;
+    }
+
+    /**
+     * Creates an invalid, blocked, or allowed decision from the validated guardrail inputs.
+     */
+    private GuardrailDecision createDecision(
+            String originalQuestion,
+            String normalizedQuestion
+    ) {
+        // Return the standard invalid outcome before running content detectors.
+        if (!inputValidator.isValid(originalQuestion, normalizedQuestion)) {
+            return invalidDecision(normalizedQuestion);
         }
 
-        GuardrailDecision decision = detectUnsafeContent(normalized)
+        // Convert the highest-priority detector match, or absence of a match, into a domain decision.
+        return detectionService.detect(normalizedQuestion)
                 .map(detection -> new GuardrailDecision(
-                        detection.outcome(), normalized, detection.reasonCode(), fingerprint
+                        detection.outcome(), normalizedQuestion, detection.reasonCode()
                 ))
                 .orElseGet(() -> new GuardrailDecision(
                         GuardrailOutcome.ALLOW_TO_INTERPRET,
-                        normalized,
-                        GuardrailReasonCode.READY_FOR_INTERPRETATION,
-                        fingerprint
+                        normalizedQuestion,
+                        GuardrailReasonCode.READY_FOR_INTERPRETATION
                 ));
-        return auditLogger.record(decision, correlationId, inputLength);
     }
 
-    private Optional<GuardrailDetection> detectUnsafeContent(String normalizedQuestion) {
-        GuardrailDetection mutation = null;
-        for (GuardrailProperties.DetectorId detectorId : properties.detectors().enabled()) {
-            GuardrailDetector detector = detectors.get(detectorId);
-            if (detector == null) {
-                throw new IllegalStateException("Configured guardrail detector is unavailable: " + detectorId);
-            }
-            Optional<GuardrailDetection> detection = detector.detect(normalizedQuestion);
-            if (detection.isEmpty()) {
-                continue;
-            }
-            if (detection.get().outcome() == GuardrailOutcome.BLOCKED_OBVIOUS_ATTACK_RAW_SQL) {
-                return detection;
-            }
-            mutation = detection.get();
-        }
-        return Optional.ofNullable(mutation);
-    }
-
-    private Map<GuardrailProperties.DetectorId, GuardrailDetector> indexDetectors(
-            List<GuardrailDetector> detectorList
-    ) {
-        Map<GuardrailProperties.DetectorId, GuardrailDetector> indexed =
-                new EnumMap<>(GuardrailProperties.DetectorId.class);
-        detectorList.forEach(detector -> {
-            GuardrailDetector previous = indexed.put(detector.detectorId(), detector);
-            if (previous != null) {
-                throw new IllegalStateException("Duplicate guardrail detector: " + detector.detectorId());
-            }
-        });
-        return Map.copyOf(indexed);
-    }
-
-    private GuardrailDecision invalidDecision(String normalized, String fingerprint) {
+    /**
+     * Creates the standard malformed-input decision.
+     */
+    private GuardrailDecision invalidDecision(String normalized) {
         return new GuardrailDecision(
                 GuardrailOutcome.REQUEST_INVALID,
                 normalized,
-                GuardrailReasonCode.MALFORMED_INPUT,
-                fingerprint
+                GuardrailReasonCode.MALFORMED_INPUT
         );
     }
 }

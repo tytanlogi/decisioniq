@@ -15,17 +15,26 @@ public class InstructionBypassDetector implements GuardrailDetector {
 
     private final List<Pattern> signatures;
 
+    /**
+     * Loads the precompiled instruction-bypass signatures from the central registry.
+     */
     public InstructionBypassDetector(GuardrailPatternRegistry patternRegistry) {
         this.signatures = patternRegistry.detectorPatterns(
                 GuardrailProperties.DetectorId.INSTRUCTION_BYPASS
         );
     }
 
+    /**
+     * Returns the configuration identifier for instruction-bypass detection.
+     */
     @Override
     public GuardrailProperties.DetectorId detectorId() {
         return GuardrailProperties.DetectorId.INSTRUCTION_BYPASS;
     }
 
+    /**
+     * Blocks text that attempts to override, reveal, or bypass system instructions.
+     */
     @Override
     public Optional<GuardrailDetection> detect(String text) {
         return signatures.stream().anyMatch(pattern -> pattern.matcher(text).find())

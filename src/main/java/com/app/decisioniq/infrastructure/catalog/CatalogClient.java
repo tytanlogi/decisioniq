@@ -2,8 +2,8 @@ package com.app.decisioniq.infrastructure.catalog;
 
 import com.app.decisioniq.api.filter.RequestIdentityFilter;
 import com.app.decisioniq.application.catalog.CatalogSearchUnavailableException;
-import com.app.decisioniq.config.catalog.CatalogRelevanceProperties;
-import com.app.decisioniq.domain.catalog.CatalogRelevanceDecision.Match;
+import com.app.decisioniq.config.catalog.CatalogClientProperties;
+import com.app.decisioniq.domain.catalog.CatalogCandidate;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -17,10 +17,11 @@ import java.util.List;
 public class CatalogClient {
 
     private final RestClient restClient;
+    private final int topK;
 
     public CatalogClient(
             RestClient.Builder builder,
-            CatalogRelevanceProperties properties
+            CatalogClientProperties properties
     ) {
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(properties.connectTimeout())
@@ -31,9 +32,10 @@ public class CatalogClient {
                 .baseUrl(properties.baseUrl())
                 .requestFactory(requestFactory)
                 .build();
+        this.topK = properties.topK();
     }
 
-    public List<Match> search(String question, String correlationId) {
+    public List<CatalogCandidate> search(String question, String correlationId) {
         try {
             SearchResponse response = restClient.post()
                     .uri("/internal/v1/catalog/search")
@@ -46,7 +48,10 @@ public class CatalogClient {
                 return List.of();
             }
             return response.hits().stream()
-                    .map(hit -> new Match(hit.catalogKey(), hit.version(), hit.score()))
+                    .map(hit -> new CatalogCandidate(
+                            hit.catalogKey(), hit.version(), hit.score()
+                    ))
+                    .limit(topK)
                     .toList();
         } catch (RestClientException exception) {
             throw new CatalogSearchUnavailableException(

@@ -4,10 +4,8 @@ import com.app.decisioniq.api.assistant.model.AssistantAnswerResponse;
 import com.app.decisioniq.api.error.DecisionIqApiException;
 import com.app.decisioniq.application.assistant.AssistantRequestResult;
 import com.app.decisioniq.application.nlp.OperationPolicyOutcome;
+import com.app.decisioniq.application.interpretation.InterpretationDisposition;
 import com.app.decisioniq.config.guardrail.GuardrailProperties;
-import com.app.decisioniq.config.catalog.CatalogRelevanceProperties;
-import com.app.decisioniq.domain.catalog.CatalogRelevanceDecision;
-import com.app.decisioniq.domain.catalog.CatalogRelevanceOutcome;
 import com.app.decisioniq.domain.guardrail.GuardrailDecision;
 import com.app.decisioniq.domain.guardrail.GuardrailOutcome;
 import org.springframework.http.HttpStatus;
@@ -17,14 +15,9 @@ import org.springframework.stereotype.Component;
 public class AssistantGuardrailHttpMapper {
 
     private final GuardrailProperties properties;
-    private final CatalogRelevanceProperties relevanceProperties;
 
-    public AssistantGuardrailHttpMapper(
-            GuardrailProperties properties,
-            CatalogRelevanceProperties relevanceProperties
-    ) {
+    public AssistantGuardrailHttpMapper(GuardrailProperties properties) {
         this.properties = properties;
-        this.relevanceProperties = relevanceProperties;
     }
 
     public AssistantAnswerResponse toResponse(AssistantRequestResult result) {
@@ -51,32 +44,49 @@ public class AssistantGuardrailHttpMapper {
             );
         }
 
-        CatalogRelevanceDecision relevance = result.catalogRelevanceDecision();
-        if (relevance == null) {
-            throw new IllegalStateException("Catalog relevance decision is required after guardrail approval");
-        }
-        if (relevance.outcome() == CatalogRelevanceOutcome.SUPPORTED) {
-            GuardrailProperties.ResponseTemplate template =
-                    properties.responses().interpretationNotImplemented();
-            throw new DecisionIqApiException(
-                    HttpStatus.NOT_IMPLEMENTED,
-                    template.code(),
-                    template.message(),
-                    result
+        if (result.interpretation() != null) {
+            InterpretationDisposition disposition = result.interpretation().disposition();
+            return new AssistantAnswerResponse(
+                    answer(disposition, result),
+                    responseCode(disposition),
+                    result.correlationId(),
+                    result.requestId(),
+                    decision.outcome(),
+                    decision.reasonCode(),
+                    result.interpretation()
             );
         }
 
-        CatalogRelevanceProperties.ResponseTemplate template = switch (relevance.outcome()) {
-            case AMBIGUOUS -> relevanceProperties.responses().ambiguous();
-            case OUT_OF_SCOPE -> relevanceProperties.responses().outOfScope();
-            case INSUFFICIENT_CONTEXT -> relevanceProperties.responses().insufficientContext();
-            case SUPPORTED -> throw new IllegalStateException("Supported relevance was already handled");
-        };
+        GuardrailProperties.ResponseTemplate template =
+                properties.responses().interpretationNotImplemented();
         throw new DecisionIqApiException(
-                HttpStatus.UNPROCESSABLE_ENTITY,
+                HttpStatus.NOT_IMPLEMENTED,
                 template.code(),
                 template.message(),
                 result
         );
+    }
+
+    private String answer(
+            InterpretationDisposition disposition,
+            AssistantRequestResult result
+    ) {
+        return switch (disposition) {
+            case READY_FOR_PLANNING ->
+                    "The request was interpreted successfully. Evidence retrieval is the next phase.";
+            case CLARIFICATION_REQUIRED -> result.interpretation()
+                    .clarificationQuestions()
+                    .stream()
+                    .findFirst()
+                    .orElse("Please clarify the requested transaction information.");
+            case OUT_OF_SCOPE ->
+                    "DecisionIQ supports read-only transaction decision intelligence questions.";
+        };
+    }
+
+    private String responseCode(InterpretationDisposition disposition) {
+        return disposition == InterpretationDisposition.READY_FOR_PLANNING
+                ? "INTERPRETATION_READY"
+                : disposition.name();
     }
 }

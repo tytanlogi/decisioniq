@@ -14,15 +14,24 @@ public class RawSqlDetector implements GuardrailDetector {
 
     private final List<java.util.regex.Pattern> signatures;
 
+    /**
+     * Loads the precompiled raw-SQL signatures owned by the guardrail pattern registry.
+     */
     public RawSqlDetector(GuardrailPatternRegistry patternRegistry) {
         this.signatures = patternRegistry.detectorPatterns(GuardrailProperties.DetectorId.RAW_SQL);
     }
 
+    /**
+     * Returns the configuration identifier for raw-SQL detection.
+     */
     @Override
     public GuardrailProperties.DetectorId detectorId() {
         return GuardrailProperties.DetectorId.RAW_SQL;
     }
 
+    /**
+     * Blocks text that matches any configured raw-SQL signature.
+     */
     @Override
     public Optional<GuardrailDetection> detect(String text) {
         return signatures.stream().anyMatch(pattern -> pattern.matcher(text).find())

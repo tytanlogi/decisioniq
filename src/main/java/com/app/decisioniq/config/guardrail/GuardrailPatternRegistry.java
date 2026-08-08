@@ -14,6 +14,9 @@ public class GuardrailPatternRegistry {
     private final Pattern correlationId;
     private final Map<GuardrailProperties.DetectorId, List<Pattern>> detectorPatterns;
 
+    /**
+     * Compiles all configured regex definitions once so request processing reuses safe patterns.
+     */
     public GuardrailPatternRegistry(GuardrailProperties properties) {
         this.correlationId = compile("correlation-id", properties.patterns().correlationId());
 
@@ -32,20 +35,32 @@ public class GuardrailPatternRegistry {
         );
     }
 
+    /**
+     * Returns the compiled pattern used to validate correlation identifiers.
+     */
     public Pattern correlationId() {
         return correlationId;
     }
 
+    /**
+     * Returns the immutable compiled signatures associated with one detector type.
+     */
     public List<Pattern> detectorPatterns(GuardrailProperties.DetectorId detectorId) {
         return detectorPatterns.getOrDefault(detectorId, List.of());
     }
 
+    /**
+     * Compiles a detector's versioned pattern definitions into reusable regex patterns.
+     */
     private List<Pattern> compileDefinitions(List<GuardrailProperties.PatternDefinition> definitions) {
         return definitions.stream()
                 .map(definition -> compile(definition.id(), definition.expression()))
                 .toList();
     }
 
+    /**
+     * Rejects unsupported regex constructs and compiles a named pattern with a clear startup error.
+     */
     private Pattern compile(String id, String expression) {
         if (containsNumericBackReference(expression)
                 || expression.contains("(?<=")
@@ -61,6 +76,9 @@ public class GuardrailPatternRegistry {
         }
     }
 
+    /**
+     * Detects numeric backreferences, which are excluded from externally configured patterns.
+     */
     private boolean containsNumericBackReference(String expression) {
         for (int index = 0; index < expression.length() - 1; index++) {
             if (expression.charAt(index) == '\\'

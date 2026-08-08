@@ -47,6 +47,9 @@ public record GuardrailProperties(
             List<@NotNull DetectorId> enabled
     ) {
 
+        /**
+         * Copies the enabled detector list so bound policy configuration cannot be mutated later.
+         */
         public Detectors {
             enabled = enabled == null ? null : List.copyOf(enabled);
         }
@@ -64,6 +67,9 @@ public record GuardrailProperties(
             @NotEmpty @Size(max = 32) List<@NotNull @Valid PatternDefinition> instructionBypass
     ) {
 
+        /**
+         * Copies all detector definitions so the active pattern policy remains immutable.
+         */
         public DetectorPatterns {
             rawSql = rawSql == null ? null : List.copyOf(rawSql);
             scriptAttack = scriptAttack == null ? null : List.copyOf(scriptAttack);

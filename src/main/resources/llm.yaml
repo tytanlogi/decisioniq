@@ -1,0 +1,19 @@
+decisioniq:
+  llm:
+    openai:
+      enabled: ${DECISIONIQ_OPENAI_ENABLED:false}
+      api-key: ${OPENAI_API_KEY:}
+      model: ${DECISIONIQ_OPENAI_MODEL:gpt-5-mini}
+      timeout: ${DECISIONIQ_OPENAI_TIMEOUT:30s}
+      max-retries: ${DECISIONIQ_OPENAI_MAX_RETRIES:2}
+      max-output-tokens: ${DECISIONIQ_OPENAI_MAX_OUTPUT_TOKENS:2000}
+      prompt-version: ${DECISIONIQ_OPENAI_PROMPT_VERSION:decisioniq-interpretation-v1}
+      allow-external-content: ${DECISIONIQ_OPENAI_ALLOW_EXTERNAL_CONTENT:false}
+    langfuse:
+      enabled: ${DECISIONIQ_LANGFUSE_ENABLED:false}
+      endpoint: ${LANGFUSE_OTEL_TRACES_ENDPOINT:http://localhost:3000/api/public/otel/v1/traces}
+      public-key: ${LANGFUSE_PUBLIC_KEY:}
+      secret-key: ${LANGFUSE_SECRET_KEY:}
+      capture-content: ${DECISIONIQ_LANGFUSE_CAPTURE_CONTENT:false}
+      environment: ${DECISIONIQ_ENVIRONMENT:local}
+      release: ${DECISIONIQ_RELEASE:development}

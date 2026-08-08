@@ -20,6 +20,10 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'com.openai:openai-java:4.43.0'
+	implementation 'io.opentelemetry:opentelemetry-api'
+	implementation 'io.opentelemetry:opentelemetry-sdk'
+	implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
 	implementation 'edu.stanford.nlp:stanford-corenlp:4.5.10'
 	runtimeOnly 'edu.stanford.nlp:stanford-corenlp:4.5.10:models'
 

@@ -1,118 +1,48 @@
 package com.app.decisioniq.application.assistant;
 
-import com.app.decisioniq.application.catalog.CatalogFrameValidation;
-import com.app.decisioniq.application.catalog.CatalogRelevanceService;
-import com.app.decisioniq.application.guardrail.ConfiguredRequestBoundaryValidator;
-import com.app.decisioniq.application.guardrail.RequestGuardrailService;
-import com.app.decisioniq.application.nlp.NlpAnalysis;
-import com.app.decisioniq.application.nlp.NlpAnalyzer;
-import com.app.decisioniq.application.nlp.NlpOperationAnalyzer;
-import com.app.decisioniq.application.nlp.NlpOperationFrame;
-import com.app.decisioniq.application.nlp.OperationPolicyOutcome;
-import com.app.decisioniq.domain.catalog.CatalogRelevanceDecision;
-import com.app.decisioniq.domain.context.TrustedRequestContext;
-import com.app.decisioniq.domain.context.TrustedRequestContextResolver;
 import com.app.decisioniq.domain.guardrail.GuardrailDecision;
 import com.app.decisioniq.domain.guardrail.GuardrailOutcome;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class GuardedAssistantRequestService implements AssistantRequestUseCase {
 
-    private static final Logger log = LoggerFactory.getLogger(GuardedAssistantRequestService.class);
+    private final AssistantRequestBoundary requestBoundary;
+    private final AssistantInterpretationStage interpretationStage;
 
-    private final ConfiguredRequestBoundaryValidator boundaryValidator;
-    private final TrustedRequestContextResolver contextResolver;
-    private final RequestGuardrailService guardrailService;
-    private final NlpAnalyzer nlpAnalyzer;
-    private final NlpOperationAnalyzer operationAnalyzer;
-    private final CatalogRelevanceService catalogRelevanceService;
-
+    /**
+     * Creates the application use case from the independent boundary and interpretation stages.
+     */
     public GuardedAssistantRequestService(
-            ConfiguredRequestBoundaryValidator boundaryValidator,
-            TrustedRequestContextResolver contextResolver,
-            RequestGuardrailService guardrailService,
-            NlpAnalyzer nlpAnalyzer,
-            NlpOperationAnalyzer operationAnalyzer,
-            CatalogRelevanceService catalogRelevanceService
+            AssistantRequestBoundary requestBoundary,
+            AssistantInterpretationStage interpretationStage
     ) {
-        this.boundaryValidator = boundaryValidator;
-        this.contextResolver = contextResolver;
-        this.guardrailService = guardrailService;
-        this.nlpAnalyzer = nlpAnalyzer;
-        this.operationAnalyzer = operationAnalyzer;
-        this.catalogRelevanceService = catalogRelevanceService;
+        this.requestBoundary = requestBoundary;
+        this.interpretationStage = interpretationStage;
     }
 
+    /**
+     * Applies the request boundary, invokes interpretation only for allowed requests, and returns the use-case result.
+     */
     @Override
     public AssistantRequestResult handle(AssistantRequestCommand command) {
-        boundaryValidator.validate(
-                command.tenantId(),
-                command.userId(),
-                command.conversationId(),
-                command.designation(),
-                command.question()
-        );
+        // Apply request-shape, trusted-context, and deterministic guardrail checks first.
+        GuardrailDecision decision = requestBoundary.evaluate(command);
 
-        TrustedRequestContext context = contextResolver.resolve(
-                command.tenantId(),
-                command.userId(),
-                command.conversationId(),
-                command.correlationId()
-        );
-        log.info(
-                "request_context correlationId={} requestId={} source={} productionTrusted={}",
-                command.correlationId(),
-                command.requestId(),
-                context.source(),
-                context.productionTrusted()
-        );
+        // Continue to NLP and model interpretation only when the boundary explicitly allows it.
+        AssistantInterpretationResult interpretationResult = decision.outcome()
+                == GuardrailOutcome.ALLOW_TO_INTERPRET
+                ? interpretationStage.interpret(command, decision.normalizedQuestion())
+                : AssistantInterpretationResult.notEvaluated();
 
-        GuardrailDecision decision = guardrailService.evaluate(
-                command.question(),
-                command.correlationId()
-        );
-        NlpAnalysis analysis = null;
-        List<NlpOperationFrame> frames = List.of();
-        OperationPolicyOutcome operationPolicyOutcome = OperationPolicyOutcome.NOT_EVALUATED;
-        CatalogFrameValidation catalogValidation = null;
-        String effectiveQuestion = null;
-        CatalogRelevanceDecision relevanceDecision = null;
-        if (decision.outcome() == GuardrailOutcome.ALLOW_TO_INTERPRET) {
-            analysis = nlpAnalyzer.analyze(decision.normalizedQuestion());
-            frames = operationAnalyzer.analyze(analysis);
-            log.info(
-                    "nlp_decomposition correlationId={} requestId={} unitCount={} effects={}",
-                    command.correlationId(),
-                    command.requestId(),
-                    frames.size(),
-                    frames.stream().map(NlpOperationFrame::effect).toList()
-            );
-            if (frames.stream().anyMatch(NlpOperationFrame::blocksRequest)) {
-                operationPolicyOutcome = OperationPolicyOutcome.BLOCKED_UNSUPPORTED_OPERATION;
-            } else {
-                operationPolicyOutcome = OperationPolicyOutcome.ALLOWED;
-                catalogValidation = catalogRelevanceService.validateFrames(
-                        frames,
-                        command.correlationId()
-                );
-                relevanceDecision = catalogValidation.decision();
-                effectiveQuestion = catalogValidation.effectiveQuestion();
-            }
-        }
+        // Combine both stage outcomes into the single result consumed by the API mapper.
         return new AssistantRequestResult(
                 command.correlationId(),
                 command.requestId(),
                 decision,
-                relevanceDecision,
-                frames,
-                operationPolicyOutcome,
-                catalogValidation,
-                effectiveQuestion
+                interpretationResult.operationPolicyOutcome(),
+                interpretationResult.interpretationInput(),
+                interpretationResult.interpretation()
         );
     }
 }

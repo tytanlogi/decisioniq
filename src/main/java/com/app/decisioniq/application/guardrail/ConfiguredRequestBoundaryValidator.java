@@ -11,10 +11,16 @@ public class ConfiguredRequestBoundaryValidator {
 
     private final GuardrailProperties properties;
 
+    /**
+     * Creates a boundary validator backed by the configured request-size limits.
+     */
     public ConfiguredRequestBoundaryValidator(GuardrailProperties properties) {
         this.properties = properties;
     }
 
+    /**
+     * Validates all externally supplied request fields and reports every length violation together.
+     */
     public void validate(
             String tenantId,
             String userId,
@@ -39,6 +45,9 @@ public class ConfiguredRequestBoundaryValidator {
         }
     }
 
+    /**
+     * Adds a field violation when a supplied value exceeds its configured maximum length.
+     */
     private void validateLength(
             String field,
             String value,

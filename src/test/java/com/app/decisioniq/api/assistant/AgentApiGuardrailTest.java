@@ -2,8 +2,15 @@ package com.app.decisioniq.api.assistant;
 
 import com.app.decisioniq.api.assistant.model.AssistantAskRequest;
 import com.app.decisioniq.api.filter.RequestIdentityFilter;
+import com.app.decisioniq.application.assistant.InterpretationInput;
 import com.app.decisioniq.application.catalog.CatalogSearchUnavailableException;
-import com.app.decisioniq.domain.catalog.CatalogRelevanceDecision.Match;
+import com.app.decisioniq.application.interpretation.InterpretationDisposition;
+import com.app.decisioniq.application.interpretation.InterpretationOperation;
+import com.app.decisioniq.application.interpretation.InterpretedUnit;
+import com.app.decisioniq.application.interpretation.QueryInterpretation;
+import com.app.decisioniq.application.interpretation.RequestInterpretationService;
+import com.app.decisioniq.application.interpretation.UnitDisposition;
+import com.app.decisioniq.domain.catalog.CatalogCandidate;
 import com.app.decisioniq.infrastructure.catalog.CatalogClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.blankOrNullString;
@@ -45,10 +53,52 @@ class AgentApiGuardrailTest {
     @MockitoBean
     private CatalogClient catalogClient;
 
+    @MockitoBean
+    private RequestInterpretationService interpretationService;
+
     @BeforeEach
     void catalogSupportsDefaultQuestion() {
         when(catalogClient.search(anyString(), anyString()))
-                .thenReturn(List.of(new Match("TRANSACTION_DETAILS", 1, 0.52)));
+                .thenReturn(List.of(new CatalogCandidate("TRANSACTION_DETAILS", 1, 0.52)));
+        when(interpretationService.interpret(
+                org.mockito.ArgumentMatchers.any(InterpretationInput.class),
+                anyString(),
+                anyString()
+        )).thenReturn(Optional.empty());
+    }
+
+    @Test
+    void returnsValidatedStructuredInterpretationWhenModelGatewayCompletes() throws Exception {
+        QueryInterpretation interpretation = new QueryInterpretation(
+                "1.0",
+                InterpretationDisposition.READY_FOR_PLANNING,
+                List.of(new InterpretedUnit(
+                        "s0c0",
+                        UnitDisposition.SUPPORTED_REQUEST,
+                        InterpretationOperation.EXPLAIN,
+                        List.of("TRANSACTION_DETAILS"),
+                        "NONE"
+                )),
+                List.of(),
+                "gpt-5-mini",
+                "decisioniq-interpretation-v1",
+                "resp-test"
+        );
+        when(interpretationService.interpret(
+                org.mockito.ArgumentMatchers.any(InterpretationInput.class),
+                anyString(),
+                anyString()
+        )).thenReturn(Optional.of(interpretation));
+
+        mockMvc.perform(post("/agent/ask")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(validRequest("why was TXN-006451 approved?"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("INTERPRETATION_READY"))
+                .andExpect(jsonPath("$.interpretation.disposition")
+                        .value("READY_FOR_PLANNING"))
+                .andExpect(jsonPath("$.interpretation.units[0].selectedCatalogKeys[0]")
+                        .value("TRANSACTION_DETAILS"));
     }
 
     @ParameterizedTest
@@ -65,13 +115,17 @@ class AgentApiGuardrailTest {
                 .andExpect(jsonPath("$.correlationId").value("corr-client-123"))
                 .andExpect(jsonPath("$.requestId", not(blankOrNullString())))
                 .andExpect(jsonPath("$.guardrailOutcome").value("ALLOW_TO_INTERPRET"))
-                .andExpect(jsonPath("$.catalogRelevanceOutcome").value("SUPPORTED"))
-                .andExpect(jsonPath("$.catalogMatches[0].catalogKey")
-                        .value("TRANSACTION_DETAILS"))
+                .andExpect(jsonPath("$.catalogRelevanceOutcome").doesNotExist())
+                .andExpect(jsonPath("$.catalogMatches").doesNotExist())
                 .andExpect(jsonPath("$.nlpAnalysis").doesNotExist())
                 .andExpect(jsonPath("$.operationFrames").doesNotExist())
                 .andExpect(jsonPath("$.catalogValidation").doesNotExist())
-                .andExpect(jsonPath("$.effectiveQuestion").doesNotExist());
+                .andExpect(jsonPath("$.effectiveQuestion").doesNotExist())
+                .andExpect(jsonPath("$.interpretationInput.schemaVersion").value("1.1"))
+                .andExpect(jsonPath("$.interpretationInput.question")
+                        .value("why was TXN-006451 approved?"))
+                .andExpect(jsonPath("$.interpretationInput.supportedUnits[0].candidates[0].catalogKey")
+                        .value("TRANSACTION_DETAILS"));
     }
 
     @Test
@@ -148,7 +202,7 @@ class AgentApiGuardrailTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(validRequest(question))))
                 .andExpect(status().isNotImplemented())
-                .andExpect(jsonPath("$.catalogRelevanceOutcome").value("SUPPORTED"));
+                .andExpect(jsonPath("$.code").value("INTERPRETATION_NOT_IMPLEMENTED"));
 
         verify(catalogClient).search(eq(firstUnit), anyString());
         verify(catalogClient).search(eq(secondUnit), anyString());
@@ -159,9 +213,9 @@ class AgentApiGuardrailTest {
         String question = "why was transaction tx:123232 was approved and if it is then fuck off";
 
         when(catalogClient.search(eq("why was transaction tx:123232 was approved"), anyString()))
-                .thenReturn(List.of(new Match("DECISION_EXPLANATION", 1, 0.52)));
+                .thenReturn(List.of(new CatalogCandidate("DECISION_EXPLANATION", 1, 0.52)));
         when(catalogClient.search(eq("if it is then fuck off"), anyString()))
-                .thenReturn(List.of(new Match("TRANSACTION_DETAILS", 1, 0.05)));
+                .thenReturn(List.of(new CatalogCandidate("TRANSACTION_DETAILS", 1, 0.05)));
 
         mockMvc.perform(post("/agent/ask")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -170,7 +224,12 @@ class AgentApiGuardrailTest {
                 .andExpect(jsonPath("$.nlpAnalysis").doesNotExist())
                 .andExpect(jsonPath("$.operationFrames").doesNotExist())
                 .andExpect(jsonPath("$.catalogValidation").doesNotExist())
-                .andExpect(jsonPath("$.effectiveQuestion").doesNotExist());
+                .andExpect(jsonPath("$.effectiveQuestion").doesNotExist())
+                .andExpect(jsonPath("$.interpretationInput.question").value(question))
+                .andExpect(jsonPath("$.interpretationInput.supportedUnits.length()").value(1))
+                .andExpect(jsonPath("$.interpretationInput.unsupportedUnits.length()").value(1))
+                .andExpect(jsonPath("$.interpretationInput.unsupportedUnits[0].reason")
+                        .value("NO_CAPABILITY_MATCH"));
     }
 
     @Test
@@ -212,7 +271,7 @@ class AgentApiGuardrailTest {
                 .andExpect(jsonPath("$.code").value("UNSUPPORTED_OR_UNSAFE_REQUEST"))
                 .andExpect(jsonPath("$.operationPolicyOutcome")
                         .value("BLOCKED_UNSUPPORTED_OPERATION"))
-                .andExpect(jsonPath("$.catalogRelevanceOutcome").doesNotExist());
+                .andExpect(jsonPath("$.interpretationInput").doesNotExist());
     }
 
     @ParameterizedTest
@@ -259,7 +318,7 @@ class AgentApiGuardrailTest {
                         ))))
                 .andExpect(status().isNotImplemented())
                 .andExpect(jsonPath("$.guardrailOutcome").value("ALLOW_TO_INTERPRET"))
-                .andExpect(jsonPath("$.catalogRelevanceOutcome").value("SUPPORTED"));
+                .andExpect(jsonPath("$.code").value("INTERPRETATION_NOT_IMPLEMENTED"));
     }
 
     @Test
@@ -269,7 +328,7 @@ class AgentApiGuardrailTest {
                         .content(json(validRequest("Inspect all transactions"))))
                 .andExpect(status().isNotImplemented())
                 .andExpect(jsonPath("$.code").value("INTERPRETATION_NOT_IMPLEMENTED"))
-                .andExpect(jsonPath("$.catalogRelevanceOutcome").value("SUPPORTED"));
+                .andExpect(jsonPath("$.catalogRelevanceOutcome").doesNotExist());
     }
 
     @Test
@@ -358,17 +417,22 @@ class AgentApiGuardrailTest {
     }
 
     @Test
-    void outOfScopeCatalogResultStopsBeforeInterpretation() throws Exception {
+    void lowScoreCatalogCandidateIsReportedAsNoCapabilityMatch() throws Exception {
         when(catalogClient.search(anyString(), anyString()))
-                .thenReturn(List.of(new Match("TRANSACTION_DETAILS", 1, 0.05)));
+                .thenReturn(List.of(new CatalogCandidate("TRANSACTION_DETAILS", 1, 0.05)));
 
         mockMvc.perform(post("/agent/ask")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(validRequest("explain the photosynthesis process in plants"))))
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.code").value("QUESTION_OUT_OF_SCOPE"))
+                .andExpect(status().isNotImplemented())
+                .andExpect(jsonPath("$.code").value("INTERPRETATION_NOT_IMPLEMENTED"))
                 .andExpect(jsonPath("$.guardrailOutcome").value("ALLOW_TO_INTERPRET"))
-                .andExpect(jsonPath("$.catalogRelevanceOutcome").value("OUT_OF_SCOPE"));
+                .andExpect(jsonPath("$.catalogRelevanceOutcome").doesNotExist())
+                .andExpect(jsonPath("$.interpretationInput.supportedUnits").isEmpty())
+                .andExpect(jsonPath("$.interpretationInput.unsupportedUnits[0].reason")
+                        .value("NO_CAPABILITY_MATCH"))
+                .andExpect(jsonPath("$.interpretationInput.unsupportedUnits[0].bestScore")
+                        .value(0.05));
     }
 
     @Test

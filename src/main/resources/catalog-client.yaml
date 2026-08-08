@@ -1,0 +1,7 @@
+decisioniq:
+  catalog-client:
+    base-url: ${CATALOG_SERVICE_URL:http://localhost:8081}
+    connect-timeout: ${CATALOG_CONNECT_TIMEOUT:1s}
+    read-timeout: ${CATALOG_READ_TIMEOUT:3s}
+    top-k: ${CATALOG_TOP_K:5}
+    minimum-supported-score: ${CATALOG_MINIMUM_SUPPORTED_SCORE:0.28}

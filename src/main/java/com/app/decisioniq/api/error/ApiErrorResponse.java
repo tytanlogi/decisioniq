@@ -1,8 +1,7 @@
 package com.app.decisioniq.api.error;
 
 import com.app.decisioniq.application.nlp.OperationPolicyOutcome;
-import com.app.decisioniq.domain.catalog.CatalogRelevanceOutcome;
-import com.app.decisioniq.domain.catalog.CatalogRelevanceDecision.Match;
+import com.app.decisioniq.application.assistant.InterpretationInput;
 import com.app.decisioniq.domain.guardrail.GuardrailOutcome;
 import com.app.decisioniq.domain.guardrail.GuardrailReasonCode;
 
@@ -19,13 +18,11 @@ public record ApiErrorResponse(
         GuardrailOutcome guardrailOutcome,
         GuardrailReasonCode guardrailReason,
         OperationPolicyOutcome operationPolicyOutcome,
-        CatalogRelevanceOutcome catalogRelevanceOutcome,
-        List<Match> catalogMatches,
+        InterpretationInput interpretationInput,
         List<ApiFieldViolation> violations
 ) {
 
     public ApiErrorResponse {
-        catalogMatches = List.copyOf(catalogMatches);
         violations = List.copyOf(violations);
     }
 }
